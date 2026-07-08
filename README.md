@@ -44,52 +44,44 @@ The alert engine is the core of Kisan Alert. It converts raw environmental senso
 
 #### Architecture Overview
 
-```
-  Geographic Coordinates (latitude, longitude)
-                          |
-                          v
-+-----------------------------------------------------+
-|         DATA AGGREGATION LAYER                       |
-|         File: src/lib/alerts/aggregate.ts            |
-|                                                     |
-|   Concurrent API calls with per-source error         |
-|   handling so one failure does not break others:     |
-|                                                     |
-|   [1] Soil Moisture API  -----> soilMoistureVwc     |
-|   [2] Weather Report API -----> maxTemperatureC     |
-|   [3] Drought/Flood Risk -----> droughtRisk,        |
-|                                  floodRisk          |
-|   [4] Irrigation Schedule -----> side-effects only  |
-|   [5] Open-Meteo Precip  -----> precipitationMm     |
-+-----------------------------------------------------+
-                          |
-                          v  (assembles RuleEvaluationInput)
-+-----------------------------------------------------+
-|         RULE EVALUATION LAYER                        |
-|         File: src/lib/alerts/rules.ts                |
-|                                                     |
-|   Pure function. No API calls. No mutations.         |
-|   Iterates 7 threshold checks:                      |
-|                                                     |
-|   soilMoistureVwc < 20%         -> HIGH   Water     |
-|   soilMoistureVwc > 60%         -> MEDIUM Water     |
-|   precipitationMm > 10mm        -> MEDIUM Weather   |
-|   floodRisk === 'High'          -> CRITICAL Flood   |
-|   droughtRisk === 'High'        -> CRITICAL Drought |
-|   maxTemperatureC > 40          -> HIGH   Weather   |
-|   windSpeedKmh > 25             -> HIGH   Crop      |
-+-----------------------------------------------------+
-                          |
-                          v  (returns KisanAlert[])
-+-----------------------------------------------------+
-|         TYPE SYSTEM LAYER                            |
-|         File: src/lib/alerts/types.ts                |
-|                                                     |
-|   KisanAlert interface with:                         |
-|   - id, severity, category, title, message           |
-|   - recommendation, timestamp, source, read          |
-|   - params (dynamic i18n interpolation values)       |
-+-----------------------------------------------------+
+```mermaid
+flowchart TB
+    subgraph Input["Input Layer"]
+        A["Geographic Coordinates<br/>(latitude, longitude)"]
+    end
+
+    subgraph Aggregation["Data Aggregation Layer<br/>src/lib/alerts/aggregate.ts"]
+        B1["Soil Moisture API<br/>-> soilMoistureVwc"]
+        B2["Weather Report API<br/>-> maxTemperatureC"]
+        B3["Drought/Flood Risk<br/>-> droughtRisk, floodRisk"]
+        B4["Irrigation Schedule<br/>-> side-effects only"]
+        B5["Open-Meteo Precip<br/>-> precipitationMm"]
+    end
+
+    subgraph Rules["Rule Evaluation Layer<br/>src/lib/alerts/rules.ts"]
+        C["evaluateRules()<br/>Pure function, no API calls<br/>7 threshold checks"]
+    end
+
+    subgraph Output["Type System Layer<br/>src/lib/alerts/types.ts"]
+        D["KisanAlert[]<br/>id, severity, category,<br/>title, message, recommendation"]
+    end
+
+    A --> B1
+    A --> B2
+    A --> B3
+    A --> B4
+    A --> B5
+    B1 --> C
+    B2 --> C
+    B3 --> C
+    B4 --> C
+    B5 --> C
+    C --> D
+
+    style Input fill:#e1f5fe,stroke:#0288d1
+    style Aggregation fill:#fff3e0,stroke:#f57c00
+    style Rules fill:#e8f5e9,stroke:#388e3c
+    style Output fill:#fce4ec,stroke:#c2185b
 ```
 
 #### The Three Files Explained
@@ -102,15 +94,26 @@ The alert engine is the core of Kisan Alert. It converts raw environmental senso
 
 #### Error Handling Design
 
-```
-  Source 1 (Soil Moisture) --FAIL--> logged, skipped, other sources continue
-  Source 2 (Weather)       --OK----> data collected
-  Source 3 (Drought/Flood) --FAIL--> logged, skipped, other sources continue
-  Source 4 (Irrigation)    --OK----> side effects only
-  Source 5 (Precipitation) --OK----> data collected
+```mermaid
+flowchart LR
+    S1["Source 1:<br/>Soil Moisture"] --> |FAIL| F1["logged, skipped"]
+    S2["Source 2:<br/>Weather"] --> |OK| D2["data collected"]
+    S3["Source 3:<br/>Drought/Flood"] --> |FAIL| F3["logged, skipped"]
+    S4["Source 4:<br/>Irrigation"] --> |OK| D4["side effects only"]
+    S5["Source 5:<br/>Precipitation"] --> |OK| D5["data collected"]
 
-  Result: 2 out of 5 sources contributed -> partial alert list returned
-          (graceful degradation, not total failure)
+    F1 --> G["Graceful Degradation<br/>Partial alert list returned"]
+    D2 --> G
+    F3 --> G
+    D4 --> G
+    D5 --> G
+
+    style S1 fill:#ffcdd2,stroke:#d32f2f
+    style S2 fill:#c8e6c9,stroke:#388e3c
+    style S3 fill:#ffcdd2,stroke:#d32f2f
+    style S4 fill:#c8e6c9,stroke:#388e3c
+    style S5 fill:#c8e6c9,stroke:#388e3c
+    style G fill:#fff9c4,stroke:#f9a825
 ```
 
 Each data source is independent. If the weather API is down, the farmer still gets drought/flood and soil moisture alerts. The system degrades gracefully rather than failing completely.
@@ -136,41 +139,25 @@ The TTS system allows farmers to listen to alerts in their native language. This
 
 #### How TTS Works
 
-```
-  User taps "Speak" button on alert card
-                    |
-                    v
-+------------------------------------------+
-|  Client: textToSpeechAction(text)        |
-|  File: src/lib/actions.ts                |
-+------------------------------------------+
-                    |
-                    v
-+------------------------------------------+
-|  Server Action (runs on Next.js server)  |
-|  File: src/ai/flows/text-to-speech.ts    |
-|                                          |
-|  1. Try gemini-2.5-flash-preview-tts     |
-|  2. Fallback: gemini-2.0-flash-preview-tts|
-|  3. Fallback: gemini-2.0-flash           |
-|                                          |
-|  All use responseModalities: ['AUDIO']   |
-|  Voice: "Algenib"                        |
-+------------------------------------------+
-                    |
-                    v
-+------------------------------------------+
-|  Raw PCM audio buffer returned           |
-|  Converted to WAV via toWav() helper:    |
-|  - 1 channel, 24kHz, 16-bit             |
-|  - Uses "wav" npm package                |
-+------------------------------------------+
-                    |
-                    v
-+------------------------------------------+
-|  Returns data:audio/wav;base64,... URI    |
-|  Browser plays via <audio> element       |
-+------------------------------------------+
+```mermaid
+flowchart TB
+    A["User taps 'Speak' button"] --> B["textToSpeechAction(text)<br/>src/lib/actions.ts"]
+    B --> C{"Try Gemini Models"}
+    C --> D["gemini-2.5-flash-preview-tts"]
+    D --> |Success| E["Raw PCM audio buffer"]
+    D --> |Fail| F["gemini-2.0-flash-preview-tts"]
+    F --> |Success| E
+    F --> |Fail| G["gemini-2.0-flash"]
+    G --> |Success| E
+    G --> |Fail| H["Return undefined<br/>(graceful degradation)"]
+    E --> I["Convert to WAV<br/>1 channel, 24kHz, 16-bit"]
+    I --> J["data:audio/wav;base64,... URI"]
+    J --> K["Browser plays via<br/>&lt;audio&gt; element"]
+
+    style A fill:#e3f2fd,stroke:#1976d2
+    style C fill:#fff3e0,stroke:#f57c00
+    style H fill:#ffcdd2,stroke:#d32f2f
+    style K fill:#e8f5e9,stroke:#388e3c
 ```
 
 #### Multi-Language Support
@@ -206,55 +193,56 @@ The platform serves two distinct user personas through a single codebase: farmer
 
 #### Mode Switching Flow
 
-```
-+-----------------------------------------------------------+
-|                    HEADER COMPONENT                        |
-|                    src/components/header.tsx                |
-|                                                           |
-|   [Kisan Alert]  [Home] [Alerts] [Crop]  |  [Lang] [Sun] |
-|                    ^                                   |   |
-|                    | Farmer Mode ON                    |   |
-|                    |                                   v   |
-|   Toggle Switch: [========] ON                     Bell Icon
-|                                                           |
-|   When toggled:                                           |
-|     - Saves to localStorage: kisan-alert.farmer-mode      |
-|     - Auto-navigates: /dashboard <-> /kisan              |
-|     - Changes nav links completely                        |
-+-----------------------------------------------------------+
+```mermaid
+flowchart LR
+    subgraph Header["Header Component<br/>src/components/header.tsx"]
+        A["Kisan Alert Logo"]
+        B["Navigation Links"]
+        C["Farmer Mode Toggle"]
+        D["Language Switcher"]
+        E["Theme Toggle"]
+        F["Notification Bell"]
+    end
+
+    C --> |Toggle ON| G["Farmer Mode"]
+    C --> |Toggle OFF| H["Advanced Mode"]
+
+    G --> I["Nav: Home, Alerts, Crop"]
+    H --> J["Nav: Dashboard, Predict, Settings"]
+
+    G --> K["Auto-navigate: /kisan"]
+    H --> L["Auto-navigate: /dashboard"]
+
+    G --> M["Save to localStorage<br/>kisan-alert.farmer-mode"]
+
+    style Header fill:#e8eaf6,stroke:#3f51b5
+    style G fill:#c8e6c9,stroke:#388e3c
+    style H fill:#bbdefb,stroke:#1976d2
 ```
 
 #### Farmer Mode vs Advanced Mode
 
-```
-+---------------------------+  +---------------------------+
-|      FARMER MODE          |  |     ADVANCED MODE          |
-|      (/kisan)             |  |     (/dashboard)           |
-|                           |  |                           |
-|  +---------------------+ |  |  +---------------------+  |
-|  | PRIMARY ADVISORY    | |  |  | SUMMARY CARDS       |  |
-|  | BANNER              | |  |  | (NDVI, NDWI, NDBI)  |  |
-|  | (most urgent alert) | |  |  +---------------------+  |
-|  +---------------------+ |  |                           |
-|                           |  |  +---------------------+  |
-|  +------+------+------+  |  |  | METRICS TABLE       |  |
-|  |Water |Crop  |Weather|  |  |  | (detailed indices)  |  |
-|  | 23%  |Green | 38C   |  |  |  +---------------------+  |
-|  |      |      |       |  |  |                           |
-|  +------+------+------+  |  |  +---------------------+  |
-|                           |  |  | RECHARTS CHARTS     |  |
-|  +------+------+------+  |  |  | (line, bar, area)   |  |
-|  |Advisory|Alerts|Speak|  |  |  +---------------------+  |
-|  |  New   |  12  | TTS |  |  |                           |
-|  +------+------+------+  |  |  +---------------------+  |
-|                           |  |  | EARTH ENGINE MAPS   |  |
-|  LARGE touch targets      |  |  | (satellite layers)  |  |
-|  HIGH contrast colors     |  |  +---------------------+  |
-|  LARGE text              |  |                           |
-|  AUDIO playback          |  |  Compact layout           |
-+---------------------------+  |  Dense data display       |
-                               |  Chart-heavy              |
-                               +---------------------------+
+```mermaid
+flowchart TB
+    subgraph Farmer["Farmer Mode<br/>/kisan"]
+        FA["Primary Advisory Banner<br/>(most urgent alert)"]
+        FB["Dashboard Cards<br/>Water | Crop | Weather"]
+        FC["Advisory Cards<br/>New | Alerts | TTS"]
+        FD["LARGE touch targets<br/>HIGH contrast colors<br/>LARGE text<br/>AUDIO playback"]
+    end
+
+    subgraph Advanced["Advanced Mode<br/>/dashboard"]
+        AA["Summary Cards<br/>(NDVI, NDWI, NDBI)"]
+        AB["Metrics Table<br/>(detailed indices)"]
+        AC["Recharts Visualizations<br/>(line, bar, area)"]
+        AD["Earth Engine Maps<br/>(satellite layers)"]
+        AE["Compact layout<br/>Dense data display<br/>Chart-heavy"]
+    end
+
+    style Farmer fill:#c8e6c9,stroke:#388e3c
+    style Advanced fill:#bbdefb,stroke:#1976d2
+    style FD fill:#fff9c4,stroke:#f9a825
+    style AE fill:#e8eaf6,stroke:#3f51b5
 ```
 
 #### Farmer Mode Pages
@@ -297,83 +285,72 @@ The platform uses a hand-written Service Worker for basic PWA capabilities. Ther
 
 #### Service Worker Lifecycle
 
-```
-+-----------------------------------------------------------+
-|                    SERVICE WORKER                          |
-|                    public/sw.js                            |
-|                                                           |
-|  INSTALL PHASE:                                           |
-|  - Precache: "/" (root page) and "/sw.js"                 |
-|  - Cache name: kisan-alert-cache-v1                       |
-|                                                           |
-|  ACTIVATION PHASE:                                        |
-|  - clients.claim() for immediate control                  |
-|  - Delete old caches not matching current name            |
-|                                                           |
-|  FETCH PHASE (Cache-First Strategy):                      |
-|                                                           |
-|  Request comes in                                         |
-|       |                                                   |
-|       v                                                   |
-|  Is it same-origin HTTP GET?                              |
-|       |                                                   |
-|       +--NO--> Pass through (no caching)                  |
-|       |                                                   |
-|       +--YES--> Is it /api/ or /_next/?                   |
-|                      |                                    |
-|                      +--YES--> Pass through               |
-|                      |                                    |
-|                      +--NO--> Check cache                 |
-|                                  |                        |
-|                          Hit? --+-- YES --> Return cached |
-|                                  |                        |
-|                                  +-- NO --> Fetch from    |
-|                                              network      |
-|                                              |            |
-|                                         Success?          |
-|                                              |            |
-|                                    +---------+---------+  |
-|                                    |                   |  |
-|                                   YES                  NO |
-|                                    |                   |  |
-|                             Clone + cache          Return  |
-|                             for future             503     |
-|                                                   "Offline"|
-+-----------------------------------------------------------+
+```mermaid
+flowchart TB
+    subgraph Install["Install Phase"]
+        A1["Precache '/' and '/sw.js'"]
+        A2["Cache name: kisan-alert-cache-v1"]
+    end
+
+    subgraph Activate["Activation Phase"]
+        B1["clients.claim() for immediate control"]
+        B2["Delete old caches"]
+    end
+
+    subgraph Fetch["Fetch Phase (Cache-First)"]
+        C1["Request comes in"]
+        C2{"Same-origin<br/>HTTP GET?"}
+        C3{"Is /api/ or<br/>/_next/?"}
+        C4{"Cache<br/>hit?"}
+        C5["Return cached"]
+        C6["Fetch from network"]
+        C7{"Success?"}
+        C8["Clone + cache"]
+        C9["Return 503<br/>Offline"]
+
+        C1 --> C2
+        C2 --> |No| C10["Pass through"]
+        C2 --> |Yes| C3
+        C3 --> |Yes| C10
+        C3 --> |No| C4
+        C4 --> |Yes| C5
+        C4 --> |No| C6
+        C6 --> C7
+        C7 --> |Yes| C8
+        C7 --> |No| C9
+    end
+
+    Install --> Activate --> Fetch
+
+    style Install fill:#e8f5e9,stroke:#388e3c
+    style Activate fill:#fff3e0,stroke:#f57c00
+    style Fetch fill:#e3f2fd,stroke:#1976d2
+    style C9 fill:#ffcdd2,stroke:#d32f2f
 ```
 
 #### Notification Flow
 
-```
-+-----------------------------------------------------------+
-|                    NOTIFICATION FLOW                        |
-|                                                           |
-|  Every 30 seconds:                                        |
-|  useAlerts hook calls refresh()                           |
-|       |                                                   |
-|       v                                                   |
-|  Fetch new alerts from getAggregatedAlerts()              |
-|       |                                                   |
-|       v                                                   |
-|  Compare with previous alerts                             |
-|       |                                                   |
-|       v                                                   |
-|  New HIGH or CRITICAL alert found?                        |
-|       |                                                   |
-|       +--YES--> triggerBrowserNotification()              |
-|       |         |                                         |
-|       |         v                                         |
-|       |         Try Service Worker notification           |
-|       |         |                                         |
-|       |         +--FAIL--> new Notification() fallback    |
-|       |                                                   |
-|       +--NO--> Continue                                   |
-|                                                           |
-|  Also updates:                                            |
-|  - App badge (unread count)                               |
-|  - localStorage cache                                     |
-|  - Cross-component event sync                             |
-+-----------------------------------------------------------+
+```mermaid
+flowchart TB
+    A["useAlerts hook<br/>refresh() every 30s"] --> B["Fetch alerts from<br/>getAggregatedAlerts()"]
+    B --> C["Compare with<br/>previous alerts"]
+    C --> D{"New HIGH or<br/>CRITICAL alert?"}
+    D --> |Yes| E["triggerBrowserNotification()"]
+    D --> |No| F["Continue"]
+
+    E --> G{"Try Service Worker<br/>notification"}
+    G --> |Success| H["Notification displayed"]
+    G --> |Fail| I["new Notification()<br/>fallback"]
+
+    A --> J["Also updates:"]
+    J --> K["App badge (unread count)"]
+    J --> L["localStorage cache"]
+    J --> M["Cross-component event sync"]
+
+    style A fill:#e3f2fd,stroke:#1976d2
+    style D fill:#fff3e0,stroke:#f57c00
+    style H fill:#e8f5e9,stroke:#388e3c
+    style I fill:#ffcdd2,stroke:#d32f2f
 ```
 
 #### Notification Settings
@@ -407,116 +384,81 @@ Available in Advanced Mode, the geospatial analytics feature processes NASA Land
 **NDVI (Normalized Difference Vegetation Index)**
 
 ```
-  NDVI = (NIR - Red) / (NIR + Red)
-
-  Range: -1.0 to +1.0
-
-  Interpretation:
-  +---------------------------+------------------+
-  | Value Range               | Meaning          |
-  +---------------------------+------------------+
-  | -1.0 to 0.0              | Water, clouds    |
-  | 0.0 to 0.2               | Bare soil/rock   |
-  | 0.2 to 0.4               | Sparse vegetation|
-  | 0.4 to 0.6               | Moderate coverage|
-  | 0.6 to 0.8               | Dense vegetation |
-  | 0.8 to 1.0               | Very dense, lush |
-  +---------------------------+------------------+
-
-  Use case: Monitor crop health, detect drought stress
+NDVI = (NIR - Red) / (NIR + Red)
+Range: -1.0 to +1.0
 ```
+
+| Value Range | Meaning |
+|-------------|---------|
+| -1.0 to 0.0 | Water, clouds |
+| 0.0 to 0.2 | Bare soil/rock |
+| 0.2 to 0.4 | Sparse vegetation |
+| 0.4 to 0.6 | Moderate coverage |
+| 0.6 to 0.8 | Dense vegetation |
+| 0.8 to 1.0 | Very dense, lush |
+
+**Use case:** Monitor crop health, detect drought stress
 
 **NDWI (Normalized Difference Water Index)**
 
 ```
-  NDWI = (Green - NIR) / (Green + NIR)
-
-  Range: -1.0 to +1.0
-
-  Interpretation:
-  +---------------------------+------------------+
-  | Value Range               | Meaning          |
-  +---------------------------+------------------+
-  | > 0.0                     | Water present    |
-  | < 0.0                     | No water         |
-  +---------------------------+------------------+
-
-  Use case: Detect surface water, monitor irrigation
+NDWI = (Green - NIR) / (Green + NIR)
+Range: -1.0 to +1.0
 ```
+
+| Value Range | Meaning |
+|-------------|---------|
+| > 0.0 | Water present |
+| < 0.0 | No water |
+
+**Use case:** Detect surface water, monitor irrigation
 
 **NDBI (Normalized Difference Built-up Index)**
 
 ```
-  NDBI = (SWIR - NIR) / (SWIR + NIR)
-
-  Range: -1.0 to +1.0
-
-  Interpretation:
-  +---------------------------+------------------+
-  | Value Range               | Meaning          |
-  +---------------------------+------------------+
-  | > 0.0                     | Built-up areas   |
-  | < 0.0                     | Vegetation/water |
-  +---------------------------+------------------+
-
-  Use case: Track urban expansion, monitor land use change
+NDBI = (SWIR - NIR) / (SWIR + NIR)
+Range: -1.0 to +1.0
 ```
+
+| Value Range | Meaning |
+|-------------|---------|
+| > 0.0 | Built-up areas |
+| < 0.0 | Vegetation/water |
+
+**Use case:** Track urban expansion, monitor land use change
 
 **NBR (Normalized Burn Ratio)**
 
 ```
-  NBR = (NIR - SWIR) / (NIR + SWIR)
-
-  Range: -1.0 to +1.0
-
-  Interpretation:
-  +---------------------------+------------------+
-  | Pre-fire NBR - Post-fire  | Burn Severity    |
-  +---------------------------+------------------+
-  | < 0.1                     | Low severity     |
-  | 0.1 to 0.27               | Moderate-low     |
-  | 0.27 to 0.66              | Moderate-high    |
-  | > 0.66                    | High severity    |
-  +---------------------------+------------------+
-
-  Use case: Assess fire damage, monitor recovery
+NBR = (NIR - SWIR) / (NIR + SWIR)
+Range: -1.0 to +1.0
 ```
+
+| Pre-fire NBR - Post-fire | Burn Severity |
+|--------------------------|---------------|
+| < 0.1 | Low severity |
+| 0.1 to 0.27 | Moderate-low |
+| 0.27 to 0.66 | Moderate-high |
+| > 0.66 | High severity |
+
+**Use case:** Assess fire damage, monitor recovery
 
 #### Data Pipeline Flow
 
-```
-  User selects region + date range
-              |
-              v
-  +---------------------------+
-  | Next.js Server Action     |
-  | src/lib/actions.ts        |
-  +---------------------------+
-              |
-              v
-  +---------------------------+
-  | Google Earth Engine API   |
-  | (authenticated via GCP    |
-  |  service account)         |
-  +---------------------------+
-              |
-              v
-  +---------------------------+
-  | Satellite imagery bands   |
-  | (Red, NIR, SWIR, Green)   |
-  +---------------------------+
-              |
-              v
-  +---------------------------+
-  | Index computation         |
-  | (NDVI, NDWI, NDBI, NBR)  |
-  +---------------------------+
-              |
-              v
-  +---------------------------+
-  | Return to client          |
-  | (charts, maps, tables)    |
-  +---------------------------+
+```mermaid
+flowchart TB
+    A["User selects region + date range"] --> B["Next.js Server Action<br/>src/lib/actions.ts"]
+    B --> C["Google Earth Engine API<br/>(authenticated via GCP service account)"]
+    C --> D["Satellite imagery bands<br/>(Red, NIR, SWIR, Green)"]
+    D --> E["Index computation<br/>(NDVI, NDWI, NDBI, NBR)"]
+    E --> F["Return to client<br/>(charts, maps, tables)"]
+
+    style A fill:#e3f2fd,stroke:#1976d2
+    style B fill:#fff3e0,stroke:#f57c00
+    style C fill:#e8f5e9,stroke:#388e3c
+    style D fill:#fce4ec,stroke:#c2185b
+    style E fill:#e8eaf6,stroke:#3f51b5
+    style F fill:#c8e6c9,stroke:#388e3c
 ```
 
 ---
@@ -527,36 +469,28 @@ The land cover classification system uses machine learning to analyze satellite 
 
 #### Change Detection Process
 
-```
-  Historical Satellite Image (Date T1)
-              |
-              v
-  +---------------------------+
-  | UNet ML Model             |
-  | src/ml/                   |
-  +---------------------------+
-              |
-              v
-  Classification Map (T1)    Classification Map (T2)
-  [forest, water, urban,     [forest, water, urban,
-   agriculture, bare]         agriculture, bare]
-              |                         |
-              +----------+--------------+
-                         |
-                         v
-              +---------------------------+
-              | Change Detection          |
-              | Compare pixel-by-pixel    |
-              +---------------------------+
-                         |
-                         v
-              +---------------------------+
-              | Change Categories:        |
-              | - Deforestation           |
-              | - Urbanization            |
-              | - Water body change       |
-              | - Agricultural expansion  |
-              +---------------------------+
+```mermaid
+flowchart TB
+    A["Historical Satellite Image<br/>(Date T1)"] --> B["UNet ML Model<br/>src/ml/"]
+    C["Current Satellite Image<br/>(Date T2)"] --> B
+
+    B --> D["Classification Map T1<br/>forest, water, urban,<br/>agriculture, bare"]
+    B --> E["Classification Map T2<br/>forest, water, urban,<br/>agriculture, bare"]
+
+    D --> F["Change Detection<br/>Compare pixel-by-pixel"]
+    E --> F
+
+    F --> G["Change Categories"]
+    G --> H["Deforestation"]
+    G --> I["Urbanization"]
+    G --> J["Water body change"]
+    G --> K["Agricultural expansion"]
+
+    style A fill:#e3f2fd,stroke:#1976d2
+    style C fill:#e3f2fd,stroke:#1976d2
+    style B fill:#fff3e0,stroke:#f57c00
+    style F fill:#e8f5e9,stroke:#388e3c
+    style G fill:#fce4ec,stroke:#c2185b
 ```
 
 #### Use Cases
@@ -577,55 +511,25 @@ The platform uses Google Gemini as the primary AI provider with automatic fallba
 
 #### Fallback Architecture
 
-```
-  AI Request Generated
-        |
-        v
-+---------------------------+
-| Try Google Gemini         |
-| (Gemini 2.0 Flash)       |
-| Paid tier, best quality   |
-| 1 attempt only            |
-+---------------------------+
-        |
-        +--SUCCESS--> Return result
-        |
-        +--FAILURE-->
-                     |
-                     v
-        +---------------------------+
-        | Try Groq                  |
-        | (Llama 3.3 70B)          |
-        | Free tier: 14,400 req/day |
-        +---------------------------+
-               |
-               +--SUCCESS--> Return result
-               |
-               +--FAILURE-->
-                            |
-                            v
-               +---------------------------+
-               | Try Mistral               |
-               | (Mistral Small)           |
-               | Free tier: 14,400 req/day |
-               +---------------------------+
-                      |
-                      +--SUCCESS--> Return result
-                      |
-                      +--FAILURE-->
-                                   |
-                                   v
-                      +---------------------------+
-                      | Try HuggingFace           |
-                      | (Mistral 7B)             |
-                      | Free tier: ~30k req/month |
-                      +---------------------------+
-                             |
-                             +--SUCCESS--> Return result
-                             |
-                             +--FAILURE--> Graceful degradation
-                                           (optional features
-                                            return undefined)
+```mermaid
+flowchart TB
+    A["AI Request Generated"] --> B["Google Gemini<br/>(Gemini 2.0 Flash)<br/>Paid tier, 1 attempt only"]
+    B --> |Success| R["Return result"]
+    B --> |Fail| C["Groq<br/>(Llama 3.3 70B)<br/>Free: 14,400 req/day"]
+    C --> |Success| R
+    C --> |Fail| D["Mistral<br/>(Mistral Small)<br/>Free: 14,400 req/day"]
+    D --> |Success| R
+    D --> |Fail| E["HuggingFace<br/>(Mistral 7B)<br/>Free: ~30k req/month"]
+    E --> |Success| R
+    E --> |Fail| F["Graceful degradation<br/>Optional features return undefined"]
+
+    style A fill:#e3f2fd,stroke:#1976d2
+    style B fill:#e8f5e9,stroke:#388e3c
+    style C fill:#fff3e0,stroke:#f57c00
+    style D fill:#e8eaf6,stroke:#3f51b5
+    style E fill:#fce4ec,stroke:#c2185b
+    style R fill:#c8e6c9,stroke:#388e3c
+    style F fill:#ffcdd2,stroke:#d32f2f
 ```
 
 #### Flow Types Detected by Fallback System
