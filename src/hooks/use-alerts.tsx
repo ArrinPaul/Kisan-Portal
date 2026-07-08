@@ -256,9 +256,12 @@ export function useAlerts(customLat?: number, customLon?: number) {
           (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
         );
 
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(finalAlerts));
-        // Dispatch custom event to notify other hook instances
-        window.dispatchEvent(new Event("kisan-alerts-changed"));
+        // Defer side-effects outside the state updater execution context
+        setTimeout(() => {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(finalAlerts));
+          window.dispatchEvent(new Event("kisan-alerts-changed"));
+        }, 0);
+
         return finalAlerts;
       });
     } catch (err) {
@@ -280,17 +283,13 @@ export function useAlerts(customLat?: number, customLon?: number) {
     return () => clearInterval(intervalId);
   }, [refresh]);
 
-  const saveAlerts = (newAlerts: KisanAlert[]) => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newAlerts));
-    setAlerts(newAlerts);
-    window.dispatchEvent(new Event("kisan-alerts-changed"));
-  };
-
   const markRead = useCallback((id: string) => {
     setAlerts((prev) => {
       const updated = prev.map((a) => (a.id === id ? { ...a, read: true } : a));
-      saveAlerts(updated);
+      setTimeout(() => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        window.dispatchEvent(new Event("kisan-alerts-changed"));
+      }, 0);
       return updated;
     });
   }, []);
@@ -298,7 +297,10 @@ export function useAlerts(customLat?: number, customLon?: number) {
   const markUnread = useCallback((id: string) => {
     setAlerts((prev) => {
       const updated = prev.map((a) => (a.id === id ? { ...a, read: false } : a));
-      saveAlerts(updated);
+      setTimeout(() => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        window.dispatchEvent(new Event("kisan-alerts-changed"));
+      }, 0);
       return updated;
     });
   }, []);
@@ -306,7 +308,10 @@ export function useAlerts(customLat?: number, customLon?: number) {
   const markAllRead = useCallback(() => {
     setAlerts((prev) => {
       const updated = prev.map((a) => ({ ...a, read: true }));
-      saveAlerts(updated);
+      setTimeout(() => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        window.dispatchEvent(new Event("kisan-alerts-changed"));
+      }, 0);
       return updated;
     });
   }, []);
@@ -314,7 +319,10 @@ export function useAlerts(customLat?: number, customLon?: number) {
   const deleteAlert = useCallback((id: string) => {
     setAlerts((prev) => {
       const updated = prev.filter((a) => a.id !== id);
-      saveAlerts(updated);
+      setTimeout(() => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        window.dispatchEvent(new Event("kisan-alerts-changed"));
+      }, 0);
       return updated;
     });
   }, []);
@@ -327,7 +335,10 @@ export function useAlerts(customLat?: number, customLon?: number) {
     };
     setAlerts((prev) => {
       const updated = [fullAlert, ...prev];
-      saveAlerts(updated);
+      setTimeout(() => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        window.dispatchEvent(new Event("kisan-alerts-changed"));
+      }, 0);
       return updated;
     });
   }, []);
