@@ -126,7 +126,7 @@ export async function getSoilAndWeatherData(latitude: number, longitude: number)
     const traceId = getTraceContext()?.requestId;
     // Soil moisture now served from the main forecast API (soil-api subdomain is defunct)
     const urls = [
-        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=soil_moisture_0_to_7cm&hourly=soil_type_0_to_10cm`,
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=soil_moisture_0_to_7cm`,
         `https://archive-api.open-meteo.com/v1/archive?latitude=${latitude}&longitude=${longitude}&start_date=2024-01-01&end_date=2024-01-02&hourly=soil_moisture_0_to_7cm` // Fallback
     ];
 
@@ -296,7 +296,6 @@ export async function getHistoricalPrecipitation(latitude: number, longitude: nu
             start_date: chunk.start,
             end_date: chunk.end,
             daily: "precipitation_sum",
-            models: "ERA5-Seamless",
         });
 
         const url = `${ARCHIVE_API_URL}?${params.toString()}`;

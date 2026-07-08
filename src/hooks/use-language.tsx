@@ -1,34 +1,38 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getUserPreferencesAction, saveUserPreferencesAction } from '@/lib/actions';
+import en from '@/locales/en.json';
 
-// Define the shape of the context
+// Static locale registry — add new languages here
+const locales: Record<string, Record<string, string>> = { en };
+
 interface LanguageContextType {
   language: string;
   setLanguage: (language: string) => void;
   t: (key: string, options?: Record<string, string | number>) => string;
 }
 
-// Create the context with a default value
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-// Define the props for the provider
 interface LanguageProviderProps {
   children: React.ReactNode;
 }
 
-// Create a provider component
 export function LanguageProvider({ children }: LanguageProviderProps) {
   const [language, setLanguage] = useState('en');
-  const [translations, setTranslations] = useState<Record<string, string>>({});
+  const [translations, setTranslations] = useState<Record<string, string>>(en);
 
   useEffect(() => {
     void (async () => {
-      const remote = await getUserPreferencesAction();
-      if (remote.data?.language) {
-        setLanguage(remote.data.language);
-        return;
+      try {
+        const remote = await getUserPreferencesAction();
+        if (remote.data?.language) {
+          setLanguage(remote.data.language);
+          return;
+        }
+      } catch {
+        // Server action failed — fall through to localStorage
       }
 
       const storedLanguage = window.localStorage.getItem('kisan-alert.language');
@@ -38,21 +42,12 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
     })();
   }, []);
 
-  const fetchTranslations = useCallback(async (lang: string) => {
-    try {
-      const response = await import(`@/locales/${lang}.json`);
-      setTranslations(response.default);
-    } catch (error) {
-      console.error(`Could not load translations for ${lang}`, error);
-      // Fallback to English if the selected language fails to load
-      const fallback = await import(`@/locales/en.json`);
-      setTranslations(fallback.default);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchTranslations(language);
-  }, [language, fetchTranslations]);
+    if (locales[language]) {
+      setTranslations(locales[language]);
+    }
+    // TODO: dynamically import other locales when added
+  }, [language]);
 
   const t = (key: string, options?: Record<string, string | number>): string => {
     let translation = translations[key] || key;
@@ -63,7 +58,7 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
     }
     return translation;
   };
-  
+
   const handleSetLanguage = (lang: string) => {
     setLanguage(lang);
     window.localStorage.setItem('kisan-alert.language', lang);
@@ -77,7 +72,6 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
   );
 }
 
-// Create a custom hook to use the language context
 export function useLanguage() {
   const context = useContext(LanguageContext);
   if (context === undefined) {

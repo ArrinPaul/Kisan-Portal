@@ -16,7 +16,7 @@ import { getSoilAndWeatherData, getMoistureLevel, getSoilTypeName, safeFetch } f
 
 // Fetch real weather forecast
 async function fetchWeatherForecast(lat: number, lon: number) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum,temperature_2m_max,evapotranspiration&timezone=auto&forecast_days=7`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum,temperature_2m_max,et0_fao_evapotranspiration&timezone=auto&forecast_days=7`;
 
   const response = await safeFetch(url, { cache: 'no-store' });
   if (!response.ok) throw new Error('Failed to fetch weather forecast');
@@ -87,7 +87,7 @@ export async function scheduleIrrigation(input: ScheduleIrrigationInput): Promis
       date,
       precipitation: forecastData.daily.precipitation_sum[i] || 0,
       maxTemp: forecastData.daily.temperature_2m_max[i] || 0,
-      evapotranspiration: forecastData.daily.evapotranspiration?.[i] || 0
+      evapotranspiration: forecastData.daily.et0_fao_evapotranspiration?.[i] || 0
     }));
     
     const promptInput = {
