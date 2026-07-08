@@ -311,3 +311,23 @@ CREATE TABLE IF NOT EXISTS feature_flags (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+-- ==========================================
+-- 10. ASYNC JOBS DOMAIN
+-- ==========================================
+
+-- Table: analysis_jobs
+-- Stores async Earth Engine computation job status and results.
+CREATE TABLE IF NOT EXISTS analysis_jobs (
+    id VARCHAR(100) PRIMARY KEY,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending', -- pending | completed | error
+    input JSONB NOT NULL,
+    data JSONB,
+    error TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    failed_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS idx_analysis_jobs_status ON analysis_jobs(status);
+CREATE INDEX IF NOT EXISTS idx_analysis_jobs_created ON analysis_jobs(created_at DESC);

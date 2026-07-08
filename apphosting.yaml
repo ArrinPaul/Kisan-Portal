@@ -1,7 +1,5 @@
-# Settings to manage and configure a Firebase App Hosting backend.
-# https://firebase.google.com/docs/app-hosting/configure
+# NOTE: This file is no longer used. App is deployed via Vercel, not Firebase App Hosting.
+# Kept for reference only. Safe to delete.
 
 runConfig:
-  # Increase this value if you'd like to automatically spin up
-  # more instances in response to increased traffic.
   maxInstances: 5

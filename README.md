@@ -508,7 +508,7 @@ graph TB
     subgraph "Data Sources & Processing"
         J[Google Earth Engine] --> K[Satellite Imagery & Indices]
         L[Open-Meteo API] --> M[Weather & Soil Moisture]
-        N[Firebase Admin] --> O[User Store]
+        N[Supabase] --> O[User Store & Job Queue]
     end
 
     subgraph "AI/ML Services"
@@ -591,7 +591,7 @@ graph LR
 | **Styling** | Tailwind CSS | 3.4 | Utility-first CSS |
 | **AI Framework** | Google Genkit | 1.21.0 | AI orchestration and TTS |
 | **Geospatial** | Google Earth Engine | 0.1.411 | Satellite data processing |
-| **Database** | Firebase Admin | 13.6 | Backend configuration services |
+| **Database** | Supabase (PostgreSQL) | Latest | User store, job queue, history |
 
 ### UI Components
 
@@ -612,7 +612,7 @@ graph LR
 
 - **Node.js** >= 24.11.1 < 25
 - **npm** or **yarn**
-- **Google Cloud Account** (for Earth Engine and Firebase)
+- **Google Cloud Account** (for Earth Engine satellite data)
 - **API Keys** (Gemini, Groq, Mistral - optional)
 
 ### Installation
@@ -693,7 +693,7 @@ kisan-alert/
 │   │   │   ├── rules.ts       # Evaluation rules and thresholds
 │   │   │   └── types.ts       # Alert model TypeScript interfaces
 │   │   ├── actions.ts         # Next.js Server actions
-│   │   ├── firebase.ts        # Firebase configuration
+│   │   ├── job-store.ts       # Supabase async job store (analysis jobs)
 │   │   ├── security.ts        # Security utilities
 │   │   └── utils.ts           # Helper functions
 │   ├── locales/               # 12 Regional Indian Language dictionaries
@@ -718,7 +718,10 @@ kisan-alert/
 |----------|-------------|---------|
 | `NODE_ENV` | Runtime environment | `development` |
 | `GEMINI_API_KEY` | Google Gemini API key | `AIza...` |
-| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | GCP service account JSON | `{"type":"service_account",...}` |
+| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | GCP service account JSON (Earth Engine only) | `{"type":"service_account",...}` |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | `https://xxxx.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | `sb_secret_...` |
+| `DATABASE_URL` | Supabase pooled connection string | `postgresql://...` |
 | `GOOGLE_CLOUD_PROJECT` | GCP project ID | `kisan-alert-prod` |
 
 ### Optional Variables
@@ -783,15 +786,23 @@ npm run test:e2e
 
 ## Deployment
 
-### Firebase App Hosting
-The frontend application layer and Next.js pages deploy directly to Firebase Hosting:
+### Vercel Deployment
+The frontend application layer and Next.js pages deploy to Vercel:
 ```bash
 # Build production bundle
 npm run build
 
-# Deploy to Firebase
-firebase deploy
+# Deploy via Vercel CLI
+vercel --prod
 ```
+
+Make sure the following environment variables are set in Vercel project settings:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `DATABASE_URL`
+- `GOOGLE_APPLICATION_CREDENTIALS_JSON` (for Earth Engine)
+- `GEMINI_API_KEY`
 
 ### Google Cloud Run
 ML pipelines and offline Earth Engine tasks run as serverless Docker containers on Google Cloud Run:

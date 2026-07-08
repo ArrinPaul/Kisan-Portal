@@ -23,10 +23,10 @@ import { buildSyntheticSplitFromLandCover, getPercentageChange, latestMetricValu
 import { enqueueJob, queueDepth } from '@/lib/job-queue';
 
 
-import { getFirestore } from '@/lib/firebase';
+import { createJob, completeJob, failJob, getJob } from '@/lib/job-store';
 
-// Use Firestore for job results to support serverless deployments.
-const JOBS_COLLECTION = 'analysis_jobs';
+// Supabase table used for async job tracking.
+const JOBS_TABLE = 'analysis_jobs';
 
 const DataPointSchema = z.object({
   date: z.string(),
@@ -131,14 +131,9 @@ export type JobResultOutput = z.infer<typeof JobResultOutputSchema>;
 // This function starts the computation and immediately returns a job ID.
 export async function startMetricsComputation(input: ComputeMetricsInput): Promise<StartComputationOutput> {
   const jobId = `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-  const db = getFirestore();
-  
-  // Initialize job in Firestore
-  await db.collection(JOBS_COLLECTION).doc(jobId).set({
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-    input: input
-  });
+
+  // Initialize job in Supabase
+  await createJob(jobId, input as unknown as Record<string, unknown>);
 
   // Do not await this. Let it run in the background.
     enqueueJob(() => computeMetricsFlow(input, jobId)).catch((e: unknown) => {
@@ -156,23 +151,20 @@ export async function startMetricsComputation(input: ComputeMetricsInput): Promi
 // This function retrieves the result of a computation.
 export async function getMetricsResult(jobId: string): Promise<JobResultOutput> {
     try {
-        const db = getFirestore();
-        const doc = await db.collection(JOBS_COLLECTION).doc(jobId).get();
+        const job = await getJob(jobId);
 
-        if (!doc.exists) {
+        if (!job) {
             return { status: 'error', error: 'Job not found.' };
         }
 
-        const job = doc.data() as any;
-
         if (job.status === 'completed') {
-            return { status: 'completed', result: job.data };
+            return { status: 'completed', result: job.data as any };
         }
 
         if (job.status === 'error') {
-            return { status: 'error', error: job.error };
+            return { status: 'error', error: job.error ?? 'Unknown error' };
         }
-        
+
         return { status: 'pending' };
     } catch (error: any) {
         const safeError = redactSensitive(error?.message || String(error));
@@ -471,24 +463,14 @@ const computeMetricsFlow = async (input: ComputeMetricsInput, jobId: string) => 
         segmentationInference,
     };
     
-    const db = getFirestore();
-    await db.collection(JOBS_COLLECTION).doc(jobId).update({
-        status: 'completed',
-        data: finalResult,
-        completedAt: new Date().toISOString()
-    });
+    await completeJob(jobId, finalResult as unknown as Record<string, unknown>);
 
   } catch (error: any) {
     console.error(`Error in computeMetricsFlow for job ${jobId}:`, error);
     try {
-        const db = getFirestore();
-        await db.collection(JOBS_COLLECTION).doc(jobId).update({
-            status: 'error',
-            error: error.message || 'An unknown error occurred during computation.',
-            failedAt: new Date().toISOString()
-        });
+        await failJob(jobId, error.message || 'An unknown error occurred during computation.');
     } catch (dbError) {
-        console.error("Critical: Failed to update error status in Firestore:", dbError);
+        console.error("Critical: Failed to update error status in Supabase:", dbError);
     }
   }
 };

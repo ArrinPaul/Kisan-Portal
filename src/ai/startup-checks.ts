@@ -43,7 +43,20 @@ export function runStartupChecks() {
     console.log(chalk.blue('ℹ️  Using fallback AI providers only.'));
   }
 
-  // Check for Google Application Credentials (for Earth Engine)
+  // Check for Supabase (database)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    console.warn(
+      chalk.yellow.bold('⚠️  Database Warning:'),
+      chalk.yellow('Supabase URL or key is not configured. Database features (users, jobs) will not work.')
+    );
+    allKeysValid = false;
+  } else {
+    console.log(chalk.green('✅ Supabase (database) configured.'));
+  }
+
+  // Check for Google Application Credentials (for Earth Engine satellite data only)
   if (!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
      console.warn(
       chalk.yellow.bold('⚠️  Earth Engine Warning:'),

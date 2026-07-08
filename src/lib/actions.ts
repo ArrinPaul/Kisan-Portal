@@ -39,8 +39,8 @@ import {
 } from '@/lib/action-schemas';
 import { z } from 'zod';
 import { cookies } from 'next/headers';
-import { getFirestore } from '@/lib/firebase';
 import { AgriXaiFormatter, type AgriXaiReport } from '@/lib/agri-xai-formatter';
+import { sql } from '@/lib/db';
 
 
 import type { AdvancedCropAdvice, DroughtFloodRisk, GenerateTimelapseVideoInput, GenerateTimelapseVideoOutput, ScenarioAnalysis } from "@/lib/types";
@@ -141,10 +141,10 @@ async function handleAction<T, U>(action: (input: T) => Promise<U>, input: T): P
                     return { data: null, error: `Bad Request (400): The AI model rejected the request, likely due to an invalid input format. Details: ${errorMessage}` };
                 }
                 if (errorMessage.includes('5 NOT_FOUND') || errorMessage.includes('NOT_FOUND')) {
-                    return { data: null, error: `Firestore Database Not Found: Please enable Firestore API at https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=genial-aviary-472405-b2 and ensure GOOGLE_APPLICATION_CREDENTIALS_JSON is set in Vercel environment variables. Wait 2-3 minutes after enabling, then redeploy.` };
+                    return { data: null, error: `Resource Not Found: ${errorMessage}` };
                 }
                 if (errorMessage.includes('PERMISSION_DENIED')) {
-                    return { data: null, error: `Firestore Permission Denied: Enable Firestore API at https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=genial-aviary-472405-b2 and verify service account has Firestore permissions.` };
+                    return { data: null, error: `Permission Denied: ${errorMessage}` };
                 }
 
                 attempt++;
@@ -288,34 +288,31 @@ export async function listUserHistoryAction(limit = 20): Promise<{ data: Awaited
 
 async function findUserByEmail(email: string) {
     try {
-        const db = getFirestore();
-        const snapshot = await db.collection("users").where("email", "==", email.toLowerCase().trim()).get();
-        if (snapshot.empty) return null;
-        const doc = snapshot.docs[0];
-        const data = doc.data();
-        return { 
-            id: doc.id, 
-            name: data.name, 
-            email: data.email, 
-            role: data.role 
-        };
+        const rows = await sql<any[]>`
+            SELECT id, full_name AS name, email, preferred_language AS role FROM users WHERE email = ${email.toLowerCase().trim()} LIMIT 1
+        `;
+        if (rows.length === 0) return null;
+        return rows[0];
     } catch (e) {
-        logger.warn("firestore_user_lookup_failed", { scope: "lib.actions", error: e instanceof Error ? e.message : String(e) });
+        logger.warn("supabase_user_lookup_failed", { scope: "lib.actions", error: e instanceof Error ? e.message : String(e) });
         return null;
     }
 }
 
 async function createUser(userId: string, name: string, email: string, role: string) {
     try {
-        const db = getFirestore();
-        await db.collection("users").doc(userId).set({
-            name,
-            email: email.toLowerCase().trim(),
-            role,
-            createdAt: new Date().toISOString()
-        });
+        await sql`
+            INSERT INTO users (email, password_hash, full_name, preferred_language)
+            VALUES (
+                ${email.toLowerCase().trim()},
+                'no_password',
+                ${name},
+                ${role}
+            )
+            ON CONFLICT (email) DO NOTHING
+        `;
     } catch (e) {
-        logger.warn("firestore_user_creation_failed", { scope: "lib.actions", error: e instanceof Error ? e.message : String(e) });
+        logger.warn("supabase_user_creation_failed", { scope: "lib.actions", error: e instanceof Error ? e.message : String(e) });
     }
 }
 
@@ -324,14 +321,15 @@ export async function signUpAction(name: string, email: string, role: string): P
         if (!name || !email || !role) {
             return { data: null, error: "All fields (name, email, role) are required." };
         }
-        
+
         const existing = await findUserByEmail(email);
         if (existing) {
             return { data: null, error: "An account with this email already exists." };
         }
 
-        const userId = `user-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-        await createUser(userId, name, email, role);
+        await createUser('', name, email, role);
+        const created = await findUserByEmail(email);
+        const userId = created?.id ?? `user-${Date.now()}`;
 
         const cookieStore = await cookies();
         cookieStore.set("kisan_alert_user_id", userId, { path: "/", maxAge: 60 * 60 * 24 * 7, secure: process.env.NODE_ENV === "production" });
@@ -350,11 +348,11 @@ export async function signInAction(email: string): Promise<{ data: { userId: str
         }
 
         const user = await findUserByEmail(email);
-        
-        // If Firestore is unavailable or credentials missing, support zero-config fallback to let the developer test locally
+
+        // If Supabase is unavailable or no creds, support zero-config fallback for local dev
         if (!user) {
-            const hasCreds = !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-            if (!hasCreds) {
+            const hasSupabase = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
+            if (!hasSupabase) {
                 // Return fallback mock user so the app still functions
                 const mockUserId = `mock-user-${Date.now()}`;
                 const mockUser = {
@@ -376,9 +374,9 @@ export async function signInAction(email: string): Promise<{ data: { userId: str
         cookieStore.set("kisan_alert_user_id", user.id, { path: "/", maxAge: 60 * 60 * 24 * 7, secure: process.env.NODE_ENV === "production" });
         cookieStore.set("kisan_alert_user_role", user.role, { path: "/", maxAge: 60 * 60 * 24 * 7, secure: process.env.NODE_ENV === "production" });
 
-        return { 
-            data: { userId: user.id, name: user.name, email: user.email, role: user.role }, 
-            error: null 
+        return {
+            data: { userId: user.id, name: user.name, email: user.email, role: user.role },
+            error: null
         };
     } catch (error) {
         return { data: null, error: getErrorMessage(error) };
