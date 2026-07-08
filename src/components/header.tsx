@@ -7,7 +7,6 @@ import {
   Settings, 
   Mail, 
   Menu, 
-  DollarSign, 
   Bell, 
   Sprout, 
   Cpu 
@@ -144,19 +143,7 @@ export function Header() {
                   {t("landing.hero.predictiveTools")}
                 </Link>
               </Button>
-              <Button
-                variant="ghost"
-                asChild
-                className={cn(
-                  buttonLinkClass,
-                  pathname === "/pricing" && "bg-muted font-bold"
-                )}
-              >
-                <Link href="/pricing">
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  {t("header.pricing")}
-                </Link>
-              </Button>
+
               <Button
                 variant="ghost"
                 asChild
@@ -330,18 +317,7 @@ export function Header() {
                           {t("landing.hero.predictiveTools")}
                         </Link>
                       </SheetClose>
-                      <SheetClose asChild>
-                        <Link
-                          href="/pricing"
-                          className={cn(
-                            "flex items-center gap-2 text-lg font-medium p-2 rounded-lg",
-                            pathname === "/pricing" && "text-primary bg-muted/30"
-                          )}
-                        >
-                          <DollarSign className="h-5 w-5" />
-                          {t("header.pricing")}
-                        </Link>
-                      </SheetClose>
+
                       <SheetClose asChild>
                         <Link
                           href="/settings"

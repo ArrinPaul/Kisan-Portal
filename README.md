@@ -77,11 +77,6 @@ flowchart TB
     B4 --> C
     B5 --> C
     C --> D
-
-    style Input fill:#e1f5fe,stroke:#0288d1
-    style Aggregation fill:#fff3e0,stroke:#f57c00
-    style Rules fill:#e8f5e9,stroke:#388e3c
-    style Output fill:#fce4ec,stroke:#c2185b
 ```
 
 #### The Three Files Explained
@@ -107,13 +102,6 @@ flowchart LR
     F3 --> G
     D4 --> G
     D5 --> G
-
-    style S1 fill:#ffcdd2,stroke:#d32f2f
-    style S2 fill:#c8e6c9,stroke:#388e3c
-    style S3 fill:#ffcdd2,stroke:#d32f2f
-    style S4 fill:#c8e6c9,stroke:#388e3c
-    style S5 fill:#c8e6c9,stroke:#388e3c
-    style G fill:#fff9c4,stroke:#f9a825
 ```
 
 Each data source is independent. If the weather API is down, the farmer still gets drought/flood and soil moisture alerts. The system degrades gracefully rather than failing completely.
@@ -153,11 +141,6 @@ flowchart TB
     E --> I["Convert to WAV<br/>1 channel, 24kHz, 16-bit"]
     I --> J["data:audio/wav;base64,... URI"]
     J --> K["Browser plays via<br/>&lt;audio&gt; element"]
-
-    style A fill:#e3f2fd,stroke:#1976d2
-    style C fill:#fff3e0,stroke:#f57c00
-    style H fill:#ffcdd2,stroke:#d32f2f
-    style K fill:#e8f5e9,stroke:#388e3c
 ```
 
 #### Multi-Language Support
@@ -214,10 +197,6 @@ flowchart LR
     H --> L["Auto-navigate: /dashboard"]
 
     G --> M["Save to localStorage<br/>kisan-alert.farmer-mode"]
-
-    style Header fill:#e8eaf6,stroke:#3f51b5
-    style G fill:#c8e6c9,stroke:#388e3c
-    style H fill:#bbdefb,stroke:#1976d2
 ```
 
 #### Farmer Mode vs Advanced Mode
@@ -238,11 +217,6 @@ flowchart TB
         AD["Earth Engine Maps<br/>(satellite layers)"]
         AE["Compact layout<br/>Dense data display<br/>Chart-heavy"]
     end
-
-    style Farmer fill:#c8e6c9,stroke:#388e3c
-    style Advanced fill:#bbdefb,stroke:#1976d2
-    style FD fill:#fff9c4,stroke:#f9a825
-    style AE fill:#e8eaf6,stroke:#3f51b5
 ```
 
 #### Farmer Mode Pages
@@ -321,11 +295,6 @@ flowchart TB
     end
 
     Install --> Activate --> Fetch
-
-    style Install fill:#e8f5e9,stroke:#388e3c
-    style Activate fill:#fff3e0,stroke:#f57c00
-    style Fetch fill:#e3f2fd,stroke:#1976d2
-    style C9 fill:#ffcdd2,stroke:#d32f2f
 ```
 
 #### Notification Flow
@@ -346,11 +315,6 @@ flowchart TB
     J --> K["App badge (unread count)"]
     J --> L["localStorage cache"]
     J --> M["Cross-component event sync"]
-
-    style A fill:#e3f2fd,stroke:#1976d2
-    style D fill:#fff3e0,stroke:#f57c00
-    style H fill:#e8f5e9,stroke:#388e3c
-    style I fill:#ffcdd2,stroke:#d32f2f
 ```
 
 #### Notification Settings
@@ -452,13 +416,6 @@ flowchart TB
     C --> D["Satellite imagery bands<br/>(Red, NIR, SWIR, Green)"]
     D --> E["Index computation<br/>(NDVI, NDWI, NDBI, NBR)"]
     E --> F["Return to client<br/>(charts, maps, tables)"]
-
-    style A fill:#e3f2fd,stroke:#1976d2
-    style B fill:#fff3e0,stroke:#f57c00
-    style C fill:#e8f5e9,stroke:#388e3c
-    style D fill:#fce4ec,stroke:#c2185b
-    style E fill:#e8eaf6,stroke:#3f51b5
-    style F fill:#c8e6c9,stroke:#388e3c
 ```
 
 ---
@@ -485,12 +442,6 @@ flowchart TB
     G --> I["Urbanization"]
     G --> J["Water body change"]
     G --> K["Agricultural expansion"]
-
-    style A fill:#e3f2fd,stroke:#1976d2
-    style C fill:#e3f2fd,stroke:#1976d2
-    style B fill:#fff3e0,stroke:#f57c00
-    style F fill:#e8f5e9,stroke:#388e3c
-    style G fill:#fce4ec,stroke:#c2185b
 ```
 
 #### Use Cases
@@ -522,14 +473,6 @@ flowchart TB
     D --> |Fail| E["HuggingFace<br/>(Mistral 7B)<br/>Free: ~30k req/month"]
     E --> |Success| R
     E --> |Fail| F["Graceful degradation<br/>Optional features return undefined"]
-
-    style A fill:#e3f2fd,stroke:#1976d2
-    style B fill:#e8f5e9,stroke:#388e3c
-    style C fill:#fff3e0,stroke:#f57c00
-    style D fill:#e8eaf6,stroke:#3f51b5
-    style E fill:#fce4ec,stroke:#c2185b
-    style R fill:#c8e6c9,stroke:#388e3c
-    style F fill:#ffcdd2,stroke:#d32f2f
 ```
 
 #### Flow Types Detected by Fallback System
