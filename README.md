@@ -201,23 +201,13 @@ flowchart LR
 
 #### Farmer Mode vs Advanced Mode
 
-```mermaid
-flowchart TB
-    subgraph Farmer["Farmer Mode<br/>/kisan"]
-        FA["Primary Advisory Banner<br/>(most urgent alert)"]
-        FB["Dashboard Cards<br/>Water | Crop | Weather"]
-        FC["Advisory Cards<br/>New | Alerts | TTS"]
-        FD["LARGE touch targets<br/>HIGH contrast colors<br/>LARGE text<br/>AUDIO playback"]
-    end
-
-    subgraph Advanced["Advanced Mode<br/>/dashboard"]
-        AA["Summary Cards<br/>(NDVI, NDWI, NDBI)"]
-        AB["Metrics Table<br/>(detailed indices)"]
-        AC["Recharts Visualizations<br/>(line, bar, area)"]
-        AD["Earth Engine Maps<br/>(satellite layers)"]
-        AE["Compact layout<br/>Dense data display<br/>Chart-heavy"]
-    end
-```
+| Feature | Farmer Mode (`/kisan`) | Advanced Mode (`/dashboard`) |
+|---------|------------------------|------------------------------|
+| **Primary View** | Primary Advisory Banner (most urgent alert) | Summary Cards (NDVI, NDWI, NDBI) |
+| **Data Display** | Dashboard Cards: Water, Crop, Weather | Metrics Table (detailed indices) |
+| **Visualizations** | Advisory Cards: New, Alerts, TTS | Recharts (line, bar, area charts) |
+| **Maps** | N/A | Earth Engine Maps (satellite layers) |
+| **Layout** | LARGE touch targets, HIGH contrast colors, LARGE text, AUDIO playback | Compact layout, Dense data display, Chart-heavy |
 
 #### Farmer Mode Pages
 

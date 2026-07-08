@@ -14,7 +14,8 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "./ui/button";
 import React, { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { getCurrentUserAction, signOutAction } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 import { ContactSheet } from "./contact-sheet";
 import { LanguageSwitcher } from "./language-switcher";
@@ -33,6 +34,18 @@ export function Header() {
   const isLandingPage = pathname === "/";
   const [isContactOpen, setContactOpen] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const router = useRouter();
+  const [user, setUser] = useState<{ userId: string; role: string } | null>(null);
+
+  useEffect(() => {
+    getCurrentUserAction().then(res => {
+      if (res.data) {
+        setUser(res.data);
+      } else {
+        setUser(null);
+      }
+    });
+  }, [pathname]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -205,6 +218,29 @@ export function Header() {
               <Mail className="mr-2 h-4 w-4" />
               {t("header.contact")}
             </Button>
+            {user ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="font-bold border-red-500/20 text-red-500 hover:bg-red-500/10 hover:text-red-400"
+                onClick={async () => {
+                  await signOutAction();
+                  setUser(null);
+                  router.push("/");
+                }}
+              >
+                Sign Out
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                size="sm"
+                asChild
+                className="font-bold bg-emerald-600 hover:bg-emerald-500 text-white"
+              >
+                <Link href="/auth">Sign In</Link>
+              </Button>
+            )}
           </div>
 
           {/* Mobile Menu & controls */}
@@ -343,6 +379,31 @@ export function Header() {
                       {t("header.contact")}
                     </Button>
                   </SheetClose>
+
+                  {user ? (
+                    <SheetClose asChild>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start gap-2 text-lg font-bold p-2 rounded-lg text-red-500 hover:text-red-400"
+                        onClick={async () => {
+                          await signOutAction();
+                          setUser(null);
+                          router.push("/");
+                        }}
+                      >
+                        Sign Out
+                      </Button>
+                    </SheetClose>
+                  ) : (
+                    <SheetClose asChild>
+                      <Link
+                        href="/auth"
+                        className="flex items-center gap-2 text-lg font-bold p-2 rounded-lg text-emerald-500 hover:text-emerald-400"
+                      >
+                        Sign In
+                      </Link>
+                    </SheetClose>
+                  )}
 
                   <div className="flex items-center justify-between pt-4 border-t">
                     <LanguageSwitcher />

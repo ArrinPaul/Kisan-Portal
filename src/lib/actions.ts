@@ -38,6 +38,8 @@ import {
     TimelapseVideoActionSchema,
 } from '@/lib/action-schemas';
 import { z } from 'zod';
+import { cookies } from 'next/headers';
+import { getFirestore } from '@/lib/firebase';
 
 
 import type { AdvancedCropAdvice, DroughtFloodRisk, GenerateTimelapseVideoInput, GenerateTimelapseVideoOutput, ScenarioAnalysis } from "@/lib/types";
@@ -276,6 +278,130 @@ export async function listUserHistoryAction(limit = 20): Promise<{ data: Awaited
         const auth = await getAuthContext();
         const data = await listUserHistory(auth.userId, limit);
         return { data, error: null };
+    } catch (error) {
+        return { data: null, error: getErrorMessage(error) };
+    }
+}
+
+// User Authentication Actions
+
+async function findUserByEmail(email: string) {
+    try {
+        const db = getFirestore();
+        const snapshot = await db.collection("users").where("email", "==", email.toLowerCase().trim()).get();
+        if (snapshot.empty) return null;
+        const doc = snapshot.docs[0];
+        const data = doc.data();
+        return { 
+            id: doc.id, 
+            name: data.name, 
+            email: data.email, 
+            role: data.role 
+        };
+    } catch (e) {
+        logger.warn("firestore_user_lookup_failed", { scope: "lib.actions", error: e instanceof Error ? e.message : String(e) });
+        return null;
+    }
+}
+
+async function createUser(userId: string, name: string, email: string, role: string) {
+    try {
+        const db = getFirestore();
+        await db.collection("users").doc(userId).set({
+            name,
+            email: email.toLowerCase().trim(),
+            role,
+            createdAt: new Date().toISOString()
+        });
+    } catch (e) {
+        logger.warn("firestore_user_creation_failed", { scope: "lib.actions", error: e instanceof Error ? e.message : String(e) });
+    }
+}
+
+export async function signUpAction(name: string, email: string, role: string): Promise<{ data: { userId: string; name: string; email: string; role: string } | null; error: string | null }> {
+    try {
+        if (!name || !email || !role) {
+            return { data: null, error: "All fields (name, email, role) are required." };
+        }
+        
+        const existing = await findUserByEmail(email);
+        if (existing) {
+            return { data: null, error: "An account with this email already exists." };
+        }
+
+        const userId = `user-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        await createUser(userId, name, email, role);
+
+        const cookieStore = await cookies();
+        cookieStore.set("earth_insights_user_id", userId, { path: "/", maxAge: 60 * 60 * 24 * 7, secure: process.env.NODE_ENV === "production" });
+        cookieStore.set("earth_insights_user_role", role, { path: "/", maxAge: 60 * 60 * 24 * 7, secure: process.env.NODE_ENV === "production" });
+
+        return { data: { userId, name, email, role }, error: null };
+    } catch (error) {
+        return { data: null, error: getErrorMessage(error) };
+    }
+}
+
+export async function signInAction(email: string): Promise<{ data: { userId: string; name: string; email: string; role: string } | null; error: string | null }> {
+    try {
+        if (!email) {
+            return { data: null, error: "Email is required." };
+        }
+
+        const user = await findUserByEmail(email);
+        
+        // If Firestore is unavailable or credentials missing, support zero-config fallback to let the developer test locally
+        if (!user) {
+            const hasCreds = !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+            if (!hasCreds) {
+                // Return fallback mock user so the app still functions
+                const mockUserId = `mock-user-${Date.now()}`;
+                const mockUser = {
+                    userId: mockUserId,
+                    name: email.split("@")[0],
+                    email,
+                    role: "analyst"
+                };
+                const cookieStore = await cookies();
+                cookieStore.set("earth_insights_user_id", mockUserId, { path: "/", maxAge: 60 * 60 * 24 * 7 });
+                cookieStore.set("earth_insights_user_role", "analyst", { path: "/", maxAge: 60 * 60 * 24 * 7 });
+                return { data: mockUser, error: null };
+            } else {
+                return { data: null, error: "No user found with this email. Please sign up." };
+            }
+        }
+
+        const cookieStore = await cookies();
+        cookieStore.set("earth_insights_user_id", user.id, { path: "/", maxAge: 60 * 60 * 24 * 7, secure: process.env.NODE_ENV === "production" });
+        cookieStore.set("earth_insights_user_role", user.role, { path: "/", maxAge: 60 * 60 * 24 * 7, secure: process.env.NODE_ENV === "production" });
+
+        return { 
+            data: { userId: user.id, name: user.name, email: user.email, role: user.role }, 
+            error: null 
+        };
+    } catch (error) {
+        return { data: null, error: getErrorMessage(error) };
+    }
+}
+
+export async function signOutAction(): Promise<{ data: boolean; error: string | null }> {
+    try {
+        const cookieStore = await cookies();
+        cookieStore.delete("earth_insights_user_id");
+        cookieStore.delete("earth_insights_user_role");
+        return { data: true, error: null };
+    } catch (error) {
+        return { data: false, error: getErrorMessage(error) };
+    }
+}
+
+export async function getCurrentUserAction(): Promise<{ data: { userId: string; role: string } | null; error: string | null }> {
+    try {
+        const auth = await getAuthContext();
+        if (auth.userId === 'anonymous') {
+            return { data: null, error: null };
+        }
+        return { data: { userId: auth.userId, role: auth.role }, error: null };
     } catch (error) {
         return { data: null, error: getErrorMessage(error) };
     }
