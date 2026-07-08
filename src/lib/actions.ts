@@ -40,7 +40,7 @@ import {
 import { z } from 'zod';
 import { cookies } from 'next/headers';
 import { AgriXaiFormatter, type AgriXaiReport } from '@/lib/agri-xai-formatter';
-import { sql } from '@/lib/db';
+import { supabase } from '@/lib/db';
 
 
 import type { AdvancedCropAdvice, DroughtFloodRisk, GenerateTimelapseVideoInput, GenerateTimelapseVideoOutput, ScenarioAnalysis } from "@/lib/types";
@@ -288,31 +288,41 @@ export async function listUserHistoryAction(limit = 20): Promise<{ data: Awaited
 
 async function findUserByEmail(email: string) {
     try {
-        const rows = await sql<any[]>`
-            SELECT id, full_name AS name, email, preferred_language AS role FROM users WHERE email = ${email.toLowerCase().trim()} LIMIT 1
-        `;
-        if (rows.length === 0) return null;
-        return rows[0];
+        const { data, error } = await supabase
+            .from('users')
+            .select('id, full_name, email, preferred_language')
+            .eq('email', email.toLowerCase().trim())
+            .single();
+
+        if (error || !data) return null;
+        return {
+            id: data.id,
+            name: data.full_name,
+            email: data.email,
+            role: data.preferred_language,
+        };
     } catch (e) {
-        logger.warn("supabase_user_lookup_failed", { scope: "lib.actions", error: e instanceof Error ? e.message : String(e) });
+        logger.warn('supabase_user_lookup_failed', { scope: 'lib.actions', error: e instanceof Error ? e.message : String(e) });
         return null;
     }
 }
 
-async function createUser(userId: string, name: string, email: string, role: string) {
+async function createUser(_userId: string, name: string, email: string, role: string) {
     try {
-        await sql`
-            INSERT INTO users (email, password_hash, full_name, preferred_language)
-            VALUES (
-                ${email.toLowerCase().trim()},
-                'no_password',
-                ${name},
-                ${role}
-            )
-            ON CONFLICT (email) DO NOTHING
-        `;
+        const { error } = await supabase
+            .from('users')
+            .insert({
+                email: email.toLowerCase().trim(),
+                password_hash: 'no_password',
+                full_name: name,
+                preferred_language: role,
+            });
+
+        if (error && error.code !== '23505') { // ignore duplicate key
+            logger.warn('supabase_user_creation_failed', { scope: 'lib.actions', error: error.message });
+        }
     } catch (e) {
-        logger.warn("supabase_user_creation_failed", { scope: "lib.actions", error: e instanceof Error ? e.message : String(e) });
+        logger.warn('supabase_user_creation_failed', { scope: 'lib.actions', error: e instanceof Error ? e.message : String(e) });
     }
 }
 
