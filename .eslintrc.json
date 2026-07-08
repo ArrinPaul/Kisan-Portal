@@ -1,4 +1,8 @@
 {
+  "ignorePatterns": [
+    "packages/db/dist/**",
+    "packages/db/node_modules/**"
+  ],
   "extends": [
     "next/core-web-vitals",
     "next/typescript"

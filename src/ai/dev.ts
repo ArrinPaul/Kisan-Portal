@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { runStartupChecks } from '@/ai/startup-checks';
 runStartupChecks();
 

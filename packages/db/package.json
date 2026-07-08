@@ -1,0 +1,16 @@
+{
+  "name": "@kisan/db",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.8",
+    "postgres": "^3.4.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

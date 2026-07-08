@@ -75,46 +75,13 @@ export async function executePromptWithFallback<TInput, TOutput>(
   const retryConfig = { ...DEFAULT_RETRY_CONFIG, ...config?.retryConfig };
   const promptVersion = resolvePromptVersion(flowHint || 'generic');
   
-  // FIRST: Try Google Gemini (but with AGGRESSIVE rate limit protection)
-  let lastError: Error | null = null;
-  console.log('[AI] Attempting Gemini (gemini-2.0-flash - with rate limit protection)...');
-  
-  // ONLY 1 ATTEMPT for Gemini to prevent hitting daily limits!
-  const MAX_GEMINI_ATTEMPTS = 1; // Prevents overuse and billing charges
-  
-  for (let attempt = 0; attempt < MAX_GEMINI_ATTEMPTS; attempt++) {
-    try {
-    const response = await promptFn(sanitizedInput);
-      console.log(`[AI] ✓ Success with Gemini`);
-    monitorPromptQuality(promptVersion.flow, 0.9, 1);
-      return response;
-    } catch (error: any) {
-      lastError = error;
-      const errorMessage = error?.message?.toLowerCase() || '';
-      
-      // AGGRESSIVE rate limit detection - immediately switch to free providers
-      if (isRetryableError(error)) {
-        console.warn(`[AI] ⚠️ Gemini rate limit detected! Switching to FREE providers to prevent billing...`);
-        // Don't retry Gemini - go straight to free providers to avoid hitting daily limit
-        break;
-      }
-      
-      // Any error - also switch to free providers to be safe
-      console.warn(`[AI] Gemini error: ${errorMessage.substring(0, 100)}. Switching to FREE providers...`);
-      break;
-    }
-  }
-
-  // SECOND: Try free providers as backup (Groq → Mistral → HuggingFace)
   try {
-    console.log('[AI] Attempting FREE providers (Groq → Mistral → HuggingFace)...');
-    
-    // Construct a proper prompt for the free providers based on flowHint or input structure
+    // Construct a proper prompt for the primary providers based on flowHint or input structure
     let promptText: string;
-    
-    if (typeof sanitizedInput === 'string') {
-      promptText = sanitizedInput;
-    } else {
+  
+  if (typeof sanitizedInput === 'string') {
+    promptText = sanitizedInput;
+  } else {
       const inputData = sanitizedInput as Record<string, any>;
       const currentDate = new Date().toISOString();
       
@@ -415,18 +382,29 @@ Now provide the JSON:`;
       }
     }
     
-    // Try multi-provider fallback
+    // FIRST: Try primary free providers (Groq is first in PROVIDER_ORDER)
+    console.log('[AI] Attempting Primary Providers (Groq/Free Fallbacks)...');
     const multiProviderResponse = await generateWithMultiProvider({ prompt: promptText });
     console.log(`[AI] ✓ Success with ${multiProviderResponse.provider}: ${multiProviderResponse.model}`);
     monitorPromptQuality(promptVersion.flow, 0.85, 1);
     return { text: multiProviderResponse.text };
   } catch (multiProviderError: any) {
-    const errorMsg = multiProviderError?.message || 'Unknown fallback error';
-    console.warn(`[AI] All free providers failed: ${errorMsg}`);
-    throw new Error(`AI Service Unavailable: Both Gemini and fallback providers (Groq/Mistral/HF) failed. Please check your API keys. Last error: ${errorMsg}`);
+    const freeErrorMsg = multiProviderError?.message || 'Unknown free provider error';
+    console.warn(`[AI] Primary providers (Groq/Free Fallbacks) failed: ${freeErrorMsg}. Switching to Fallback Gemini...`);
+    
+    // SECOND: Fallback to Google Gemini
+    try {
+      console.log('[AI] Attempting Fallback Gemini...');
+      const response = await promptFn(sanitizedInput);
+      console.log(`[AI] ✓ Success with Fallback Gemini`);
+      monitorPromptQuality(promptVersion.flow, 0.9, 1);
+      return response;
+    } catch (geminiError: any) {
+      const geminiErrorMsg = geminiError?.message || 'Unknown Gemini error';
+      console.error(`[AI] Fallback Gemini also failed: ${geminiErrorMsg}`);
+      throw new Error(`AI Service Unavailable: Both Primary Groq/Free and Fallback Gemini failed. Last error: ${geminiErrorMsg}`);
+    }
   }
-  
-  throw lastError || new Error('All AI providers exhausted (Gemini failed, free providers unavailable)');
 }
 
 /**
