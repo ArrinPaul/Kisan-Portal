@@ -8,6 +8,7 @@ import {
   predictSoilMoistureAction,
   analyzeDroughtAndFloodRiskAction,
 } from "@/lib/actions";
+import { safeFetch } from "@/services/open-meteo";
 
 /**
  * Aggregates climate, weather, and soil data for a location and passes them
@@ -88,7 +89,7 @@ export async function getAggregatedAlerts(
   // 5. Fetch Precipitation for the Next 24h directly from Open-Meteo as a robust fallback/supplement
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=precipitation_sum&timezone=auto&forecast_days=1`;
-    const response = await fetch(url, { next: { revalidate: 300 } });
+    const response = await safeFetch(url, { cache: 'no-store' });
     if (response.ok) {
       const data = await response.json();
       if (data.daily && data.daily.precipitation_sum && data.daily.precipitation_sum.length > 0) {

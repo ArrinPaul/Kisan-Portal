@@ -12,7 +12,7 @@ const httpsAgent = new https.Agent({
     rejectUnauthorized: true,
 });
 
-async function safeFetch(url: string, options?: RequestInit): Promise<Response> {
+export async function safeFetch(url: string, options?: RequestInit): Promise<Response> {
     // On Windows, use Node.js https module to handle SSL properly
     if (process.platform === 'win32') {
         return new Promise((resolve, reject) => {
@@ -124,10 +124,10 @@ export interface HistoricalPrecipitationData {
  */
 export async function getSoilAndWeatherData(latitude: number, longitude: number): Promise<SoilAndWeatherData> {
     const traceId = getTraceContext()?.requestId;
-    // Try primary URL first, then fallback
+    // Soil moisture now served from the main forecast API (soil-api subdomain is defunct)
     const urls = [
-        `https://soil-api.open-meteo.com/v1/soil?latitude=${latitude}&longitude=${longitude}&current=soil_moisture_0_to_1cm&hourly=soil_type_0_to_10cm`,
-        `https://archive-api.open-meteo.com/v1/archive?latitude=${latitude}&longitude=${longitude}&start_date=2024-01-01&end_date=2024-01-01&hourly=soil_moisture_0_to_1cm` // Fallback
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=soil_moisture_0_to_7cm&hourly=soil_type_0_to_10cm`,
+        `https://archive-api.open-meteo.com/v1/archive?latitude=${latitude}&longitude=${longitude}&start_date=2024-01-01&end_date=2024-01-02&hourly=soil_moisture_0_to_7cm` // Fallback
     ];
 
     for (const url of urls) {
@@ -141,13 +141,20 @@ export async function getSoilAndWeatherData(latitude: number, longitude: number)
             }
             const data = await response.json();
             
-            // Normalize fallback data structure
+            // Normalize fallback data structure (API may return 0_to_7cm or 0_to_1cm)
+            const moistureKey = data.current?.soil_moisture_0_to_7cm !== undefined
+                ? 'soil_moisture_0_to_7cm'
+                : 'soil_moisture_0_to_1cm';
             if (!data.current) {
                 data.current = {
                     time: new Date().toISOString(),
                     interval: 3600,
-                    soil_moisture_0_to_1cm: 0.25 // Default optimal moisture
+                    [moistureKey]: 0.25
                 };
+            }
+            // Map the returned key to our interface's expected key
+            if (data.current?.[moistureKey] !== undefined && data.current?.soil_moisture_0_to_1cm === undefined) {
+                data.current.soil_moisture_0_to_1cm = data.current[moistureKey];
             }
             if (!data.hourly) {
                 data.hourly = {
@@ -263,52 +270,68 @@ export async function getHistoricalWeather(latitude: number, longitude: number, 
 
 /**
  * Fetches the 30-year average annual precipitation for a given location.
+ * Uses daily data and aggregates into yearly sums (archive API has no yearly param).
+ * Fetches in 5-year chunks to avoid oversized responses.
  * @param latitude The latitude of the location.
  * @param longitude The longitude of the location.
  * @returns A promise that resolves to the historical precipitation data.
  */
 export async function getHistoricalPrecipitation(latitude: number, longitude: number): Promise<HistoricalPrecipitationData> {
     const traceId = getTraceContext()?.requestId;
-    // Fetches data for the climate normal period (1991-2020) to get a 30-year average.
-    const params = new URLSearchParams({
-        latitude: latitude.toString(),
-        longitude: longitude.toString(),
-        start_date: '1991-01-01',
-        end_date: '2020-12-31', 
-        yearly: "precipitation_sum",
-        models: "ERA5_seamless", // Use climate reanalysis data
-    });
+    const yearlyTotals: number[] = [];
 
-    const url = `${ARCHIVE_API_URL}?${params.toString()}`;
+    // Fetch 30 years in 5-year chunks (1991-2020)
+    const chunks: Array<{ start: string; end: string }> = [];
+    for (let year = 1991; year <= 2020; year += 5) {
+        chunks.push({
+            start: `${year}-01-01`,
+            end: `${Math.min(year + 4, 2020)}-12-31`,
+        });
+    }
 
-    try {
-        const response = await safeFetch(url, {
-            cache: 'no-store',
-            headers: traceId ? { 'x-request-id': traceId } : undefined,
+    for (const chunk of chunks) {
+        const params = new URLSearchParams({
+            latitude: latitude.toString(),
+            longitude: longitude.toString(),
+            start_date: chunk.start,
+            end_date: chunk.end,
+            daily: "precipitation_sum",
+            models: "ERA5-Seamless",
         });
-        if (!response.ok) {
-            throw new Error(`Open-Meteo Archive API returned an error: ${response.status} ${response.statusText}`);
+
+        const url = `${ARCHIVE_API_URL}?${params.toString()}`;
+
+        try {
+            const response = await safeFetch(url, {
+                cache: 'no-store',
+                headers: traceId ? { 'x-request-id': traceId } : undefined,
+            });
+            if (!response.ok) {
+                throw new Error(`Open-Meteo Archive API returned an error: ${response.status} ${response.statusText}`);
+            }
+            const data = await response.json();
+
+            // Sum daily precipitation into a total for this chunk, then derive yearly average
+            if (data.daily?.precipitation_sum) {
+                const validDays = data.daily.precipitation_sum.filter((p: number | null) => p !== null) as number[];
+                const totalMm = validDays.reduce((a: number, b: number) => a + b, 0);
+                const startYear = new Date(chunk.start).getFullYear();
+                const endYear = new Date(chunk.end).getFullYear();
+                const numYears = endYear - startYear + 1;
+                yearlyTotals.push(totalMm / numYears); // average per year for this chunk
+            }
+        } catch (error: unknown) {
+            logger.warn('precipitation_chunk_fetch_failed', {
+                scope: 'services.open-meteo',
+                chunk: `${chunk.start} to ${chunk.end}`,
+                error: redactSensitive(error instanceof Error ? error.message : String(error)),
+            });
+            // Continue to next chunk
         }
-        const data = await response.json();
-        
-        // The API returns yearly data for the whole range. We need to average it.
-        if (data.yearly && data.yearly.precipitation_sum && data.yearly.precipitation_sum.length > 0) {
-            const validValues = data.yearly.precipitation_sum.filter((p: number | null) => p !== null);
-            const average = validValues.reduce((a: number, b: number) => a + b, 0) / validValues.length;
-            // We'll return the average as if it were a single yearly value for simplicity.
-            data.yearly.precipitation_sum = [average];
-            data.yearly.time = [ '1991-2020 Average' ];
-        }
-        
-        return data as HistoricalPrecipitationData;
-    } catch (error: unknown) {
-        logger.error('historical_precipitation_fetch_failed', {
-            scope: 'services.open-meteo',
-            error: redactSensitive(error instanceof Error ? error.message : String(error)),
-        });
-        logger.warn('historical_precipitation_mock_fallback', { scope: 'services.open-meteo' });
-        
-        // Return mock 30-year average (global average ~500mm/year)
+    }
+
+    if (yearlyTotals.length > 0) {
+        const averageAnnualMm = yearlyTotals.reduce((a, b) => a + b, 0) / yearlyTotals.length;
         return {
             latitude,
             longitude,
@@ -323,10 +346,30 @@ export async function getHistoricalPrecipitation(latitude: number, longitude: nu
             },
             yearly: {
                 time: ['1991-2020 Average'],
-                precipitation_sum: [500 + (Math.random() - 0.5) * 200] // 400-600mm range
+                precipitation_sum: [averageAnnualMm]
             }
         };
     }
+
+    // All chunks failed — return mock fallback
+    logger.error('historical_precipitation_fetch_failed', { scope: 'services.open-meteo' });
+    return {
+        latitude,
+        longitude,
+        generationtime_ms: 0,
+        utc_offset_seconds: 0,
+        timezone: 'UTC',
+        timezone_abbreviation: 'UTC',
+        elevation: 0,
+        yearly_units: {
+            time: 'string',
+            precipitation_sum: 'mm'
+        },
+        yearly: {
+            time: ['1991-2020 Average'],
+            precipitation_sum: [500 + (Math.random() - 0.5) * 200]
+        }
+    };
 }
 
 

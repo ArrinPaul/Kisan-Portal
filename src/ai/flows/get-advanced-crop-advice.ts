@@ -15,13 +15,13 @@ import { getSoilType } from '@/ai/tools/get-soil-type';
 import { z } from 'genkit';
 import type { AdvancedCropAdvice } from '@/lib/types';
 import { executePromptWithFallback, safeParseAIJson } from '@/ai/ai-utils';
-import { getHistoricalWeather, getSoilAndWeatherData } from '@/services/open-meteo';
+import { getHistoricalWeather, getSoilAndWeatherData, safeFetch } from '@/services/open-meteo';
 
 // Fetch real-time climate data to validate and enrich the climate description
 async function fetchRealClimateData(lat: number, lon: number) {
   // Get current weather conditions
   const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&forecast_days=7`;
-  const weatherResponse = await fetch(weatherUrl, { cache: 'no-store' });
+  const weatherResponse = await safeFetch(weatherUrl, { cache: 'no-store' });
   const weatherData = await weatherResponse.json();
   
   // Get 3-month historical data
