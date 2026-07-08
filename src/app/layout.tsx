@@ -7,8 +7,8 @@ import { ThemeProvider } from "@/components/providers";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Earth Insights ",
-  description: "Analyze environmental data with cutting-edge insights.",
+  title: "Kisan Alert",
+  description: "A farmer-first environmental alert, irrigation scheduling, and agricultural operations advisory platform.",
 };
 
 export default function RootLayout({
