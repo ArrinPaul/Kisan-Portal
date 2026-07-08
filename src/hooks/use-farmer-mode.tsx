@@ -13,7 +13,6 @@ const FarmerModeContext = createContext<FarmerModeContextType | undefined>(undef
 
 export function FarmerModeProvider({ children }: { children: React.ReactNode }) {
   const [isFarmerMode, setIsFarmerModeState] = useState<boolean>(true); // Default to Farmer Mode for farmer-first focus
-  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -22,7 +21,6 @@ export function FarmerModeProvider({ children }: { children: React.ReactNode }) 
     if (stored !== null) {
       setIsFarmerModeState(stored === 'true');
     }
-    setMounted(true);
   }, []);
 
   const setFarmerMode = (value: boolean) => {
@@ -40,11 +38,6 @@ export function FarmerModeProvider({ children }: { children: React.ReactNode }) 
   const toggleFarmerMode = () => {
     setFarmerMode(!isFarmerMode);
   };
-
-  // Prevent flash of content/misalignment before hydration
-  if (!mounted) {
-    return <>{children}</>;
-  }
 
   return (
     <FarmerModeContext.Provider value={{ isFarmerMode, setFarmerMode, toggleFarmerMode }}>

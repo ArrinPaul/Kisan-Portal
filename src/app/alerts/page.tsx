@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ChevronLeft, CheckCheck, Search } from "lucide-react";
+import { ChevronLeft, CheckCheck, Search, Loader2 } from "lucide-react";
 import { Header } from "@/components/header";
 import { AlertFeed } from "@/components/alert-feed";
 import { useAlerts } from "@/hooks/use-alerts";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ContactSheet } from "@/components/contact-sheet";
 
-export default function AlertsPage() {
+function AlertsPageContent() {
   const { t } = useLanguage();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -249,5 +249,20 @@ export default function AlertsPage() {
 
       <ContactSheet open={isContactOpen} onOpenChange={setContactOpen} />
     </div>
+  );
+}
+
+export default function AlertsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col min-h-screen bg-background">
+        <Header />
+        <main className="flex-1 container px-4 py-8 max-w-5xl flex items-center justify-center min-h-[50vh]">
+          <Loader2 className="h-12 w-12 animate-spin text-emerald-600 dark:text-emerald-500" />
+        </main>
+      </div>
+    }>
+      <AlertsPageContent />
+    </Suspense>
   );
 }
