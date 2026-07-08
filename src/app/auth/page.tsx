@@ -62,8 +62,8 @@ export default function AuthPage() {
             title: "Account Created",
             description: `Welcome, ${name}! Your account has been registered successfully.`,
           });
-          // Redirect to appropriate cockpit
-          router.push(role === "viewer" ? "/kisan" : "/dashboard");
+          // Redirect to dashboard
+          router.push("/dashboard");
         }
       } else {
         const res = await signInAction(email);
@@ -78,8 +78,8 @@ export default function AuthPage() {
             title: "Welcome Back",
             description: `Successfully signed in as ${res.data.name || email}!`,
           });
-          // Redirect depending on user role
-          router.push(res.data.role === "viewer" ? "/kisan" : "/dashboard");
+          // Redirect to dashboard
+          router.push("/dashboard");
         }
       }
     } catch (err) {

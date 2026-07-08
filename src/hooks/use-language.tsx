@@ -31,7 +31,7 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
         return;
       }
 
-      const storedLanguage = window.localStorage.getItem('earth-insights.language');
+      const storedLanguage = window.localStorage.getItem('kisan-alert.language');
       if (storedLanguage) {
         setLanguage(storedLanguage);
       }
@@ -66,7 +66,7 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
   
   const handleSetLanguage = (lang: string) => {
     setLanguage(lang);
-    window.localStorage.setItem('earth-insights.language', lang);
+    window.localStorage.setItem('kisan-alert.language', lang);
     void saveUserPreferencesAction({ language: lang });
   };
 

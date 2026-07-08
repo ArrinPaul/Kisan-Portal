@@ -5,6 +5,46 @@
 import { logger } from '@/lib/logger';
 import { redactSensitive } from '@/lib/security';
 import { getTraceContext } from '@/lib/trace';
+import https from 'https';
+
+// Create a custom fetch that handles SSL certificate issues on Windows
+const httpsAgent = new https.Agent({
+    rejectUnauthorized: true,
+});
+
+async function safeFetch(url: string, options?: RequestInit): Promise<Response> {
+    // On Windows, use Node.js https module to handle SSL properly
+    if (process.platform === 'win32') {
+        return new Promise((resolve, reject) => {
+            const urlObj = new URL(url);
+            const reqOptions = {
+                hostname: urlObj.hostname,
+                port: urlObj.port || 443,
+                path: urlObj.pathname + urlObj.search,
+                method: options?.method || 'GET',
+                headers: options?.headers as Record<string, string> || {},
+                agent: httpsAgent,
+            };
+
+            const req = https.request(reqOptions, (res) => {
+                let data = '';
+                res.on('data', (chunk) => { data += chunk; });
+                res.on('end', () => {
+                    resolve(new Response(data, {
+                        status: res.statusCode || 200,
+                        statusText: res.statusMessage || 'OK',
+                        headers: new Headers(res.headers as Record<string, string>),
+                    }));
+                });
+            });
+
+            req.on('error', reject);
+            req.end();
+        });
+    }
+
+    return fetch(url, options);
+}
 
 const ARCHIVE_API_URL = "https://archive-api.open-meteo.com/v1/archive";
 
@@ -92,7 +132,7 @@ export async function getSoilAndWeatherData(latitude: number, longitude: number)
 
     for (const url of urls) {
         try {
-            const response = await fetch(url, {
+            const response = await safeFetch(url, {
                 cache: 'no-store',
                 headers: traceId ? { 'x-request-id': traceId } : undefined,
             });
@@ -167,7 +207,7 @@ export async function getHistoricalWeather(latitude: number, longitude: number, 
     const url = `${ARCHIVE_API_URL}?${params.toString()}`;
     
     try {
-        const response = await fetch(url, {
+        const response = await safeFetch(url, {
             cache: 'no-store',
             headers: traceId ? { 'x-request-id': traceId } : undefined,
         });
@@ -242,7 +282,7 @@ export async function getHistoricalPrecipitation(latitude: number, longitude: nu
     const url = `${ARCHIVE_API_URL}?${params.toString()}`;
 
     try {
-        const response = await fetch(url, {
+        const response = await safeFetch(url, {
             cache: 'no-store',
             headers: traceId ? { 'x-request-id': traceId } : undefined,
         });

@@ -1,34 +1,34 @@
 {
   "topics": [
-    "earth-insights.pipeline.preprocess",
-    "earth-insights.pipeline.train",
-    "earth-insights.pipeline.inference",
-    "earth-insights.pipeline.promote",
-    "earth-insights.pipeline.dlq"
+    "kisan-alert.pipeline.preprocess",
+    "kisan-alert.pipeline.train",
+    "kisan-alert.pipeline.inference",
+    "kisan-alert.pipeline.promote",
+    "kisan-alert.pipeline.dlq"
   ],
   "subscriptions": [
     {
-      "name": "earth-insights.pipeline.preprocess.sub",
-      "topic": "earth-insights.pipeline.preprocess",
-      "deadLetterTopic": "earth-insights.pipeline.dlq",
+      "name": "kisan-alert.pipeline.preprocess.sub",
+      "topic": "kisan-alert.pipeline.preprocess",
+      "deadLetterTopic": "kisan-alert.pipeline.dlq",
       "maxDeliveryAttempts": 10
     },
     {
-      "name": "earth-insights.pipeline.train.sub",
-      "topic": "earth-insights.pipeline.train",
-      "deadLetterTopic": "earth-insights.pipeline.dlq",
+      "name": "kisan-alert.pipeline.train.sub",
+      "topic": "kisan-alert.pipeline.train",
+      "deadLetterTopic": "kisan-alert.pipeline.dlq",
       "maxDeliveryAttempts": 10
     },
     {
-      "name": "earth-insights.pipeline.inference.sub",
-      "topic": "earth-insights.pipeline.inference",
-      "deadLetterTopic": "earth-insights.pipeline.dlq",
+      "name": "kisan-alert.pipeline.inference.sub",
+      "topic": "kisan-alert.pipeline.inference",
+      "deadLetterTopic": "kisan-alert.pipeline.dlq",
       "maxDeliveryAttempts": 10
     },
     {
-      "name": "earth-insights.pipeline.promote.sub",
-      "topic": "earth-insights.pipeline.promote",
-      "deadLetterTopic": "earth-insights.pipeline.dlq",
+      "name": "kisan-alert.pipeline.promote.sub",
+      "topic": "kisan-alert.pipeline.promote",
+      "deadLetterTopic": "kisan-alert.pipeline.dlq",
       "maxDeliveryAttempts": 10
     }
   ]

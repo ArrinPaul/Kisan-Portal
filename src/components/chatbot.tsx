@@ -20,7 +20,7 @@ interface MessageWithAudio extends ChatMessage {
     audioState?: AudioState;
 }
 
-const CHAT_STORAGE_KEY = 'earth-insights.chat-history';
+const CHAT_STORAGE_KEY = 'kisan-alert.chat-history';
 
 // Add types for Web Speech API
 interface SpeechRecognitionEvent extends Event {

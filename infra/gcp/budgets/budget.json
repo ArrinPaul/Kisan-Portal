@@ -1,6 +1,6 @@
 {
   "budget": {
-    "displayName": "earth-insights-mlops-budget",
+    "displayName": "kisan-alert-mlops-budget",
     "amountUsd": 1200,
     "alertThresholdRules": [
       { "thresholdPercent": 0.5 },

@@ -87,6 +87,6 @@ export async function executeCloudRunStage(
     startedAt,
     completedAt: new Date().toISOString(),
     attempt,
-    outputUri: `gs://earth-insights/${stage}/${Date.now()}.json`,
+    outputUri: `gs://kisan-alert/${stage}/${Date.now()}.json`,
   };
 }

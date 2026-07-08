@@ -20,7 +20,7 @@
     }
   ],
   "dashboard": {
-    "name": "earth-insights-serverless",
+    "name": "kisan-alert-serverless",
     "widgets": [
       "pipeline_success_rate",
       "stage_duration",

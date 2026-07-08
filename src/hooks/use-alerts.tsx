@@ -5,7 +5,7 @@ import type { KisanAlert } from "@/lib/alerts/types";
 import { getAggregatedAlerts } from "@/lib/alerts/aggregate";
 
 const STORAGE_KEY = "kisan-alerts";
-const HISTORY_STORAGE_KEY = "earth-insights.dashboard-history";
+const HISTORY_STORAGE_KEY = "kisan-alert.dashboard-history";
 
 // Default alerts for initial onboarding/fallback
 export const defaultAlerts: KisanAlert[] = [

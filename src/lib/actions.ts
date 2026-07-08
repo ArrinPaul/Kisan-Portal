@@ -334,8 +334,8 @@ export async function signUpAction(name: string, email: string, role: string): P
         await createUser(userId, name, email, role);
 
         const cookieStore = await cookies();
-        cookieStore.set("earth_insights_user_id", userId, { path: "/", maxAge: 60 * 60 * 24 * 7, secure: process.env.NODE_ENV === "production" });
-        cookieStore.set("earth_insights_user_role", role, { path: "/", maxAge: 60 * 60 * 24 * 7, secure: process.env.NODE_ENV === "production" });
+        cookieStore.set("kisan_alert_user_id", userId, { path: "/", maxAge: 60 * 60 * 24 * 7, secure: process.env.NODE_ENV === "production" });
+        cookieStore.set("kisan_alert_user_role", role, { path: "/", maxAge: 60 * 60 * 24 * 7, secure: process.env.NODE_ENV === "production" });
 
         return { data: { userId, name, email, role }, error: null };
     } catch (error) {
@@ -364,8 +364,8 @@ export async function signInAction(email: string): Promise<{ data: { userId: str
                     role: "analyst"
                 };
                 const cookieStore = await cookies();
-                cookieStore.set("earth_insights_user_id", mockUserId, { path: "/", maxAge: 60 * 60 * 24 * 7 });
-                cookieStore.set("earth_insights_user_role", "analyst", { path: "/", maxAge: 60 * 60 * 24 * 7 });
+                cookieStore.set("kisan_alert_user_id", mockUserId, { path: "/", maxAge: 60 * 60 * 24 * 7 });
+                cookieStore.set("kisan_alert_user_role", "analyst", { path: "/", maxAge: 60 * 60 * 24 * 7 });
                 return { data: mockUser, error: null };
             } else {
                 return { data: null, error: "No user found with this email. Please sign up." };
@@ -373,8 +373,8 @@ export async function signInAction(email: string): Promise<{ data: { userId: str
         }
 
         const cookieStore = await cookies();
-        cookieStore.set("earth_insights_user_id", user.id, { path: "/", maxAge: 60 * 60 * 24 * 7, secure: process.env.NODE_ENV === "production" });
-        cookieStore.set("earth_insights_user_role", user.role, { path: "/", maxAge: 60 * 60 * 24 * 7, secure: process.env.NODE_ENV === "production" });
+        cookieStore.set("kisan_alert_user_id", user.id, { path: "/", maxAge: 60 * 60 * 24 * 7, secure: process.env.NODE_ENV === "production" });
+        cookieStore.set("kisan_alert_user_role", user.role, { path: "/", maxAge: 60 * 60 * 24 * 7, secure: process.env.NODE_ENV === "production" });
 
         return { 
             data: { userId: user.id, name: user.name, email: user.email, role: user.role }, 
@@ -388,8 +388,8 @@ export async function signInAction(email: string): Promise<{ data: { userId: str
 export async function signOutAction(): Promise<{ data: boolean; error: string | null }> {
     try {
         const cookieStore = await cookies();
-        cookieStore.delete("earth_insights_user_id");
-        cookieStore.delete("earth_insights_user_role");
+        cookieStore.delete("kisan_alert_user_id");
+        cookieStore.delete("kisan_alert_user_role");
         return { data: true, error: null };
     } catch (error) {
         return { data: false, error: getErrorMessage(error) };

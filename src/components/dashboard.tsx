@@ -24,7 +24,7 @@ import { GISDashboard } from "@/components/gis-dashboard";
 import { AgriXaiReportCard } from "@/components/agri-xai-report";
 
 type ComputationStatus = 'idle' | 'computing' | 'polling' | 'completed' | 'error';
-const HISTORY_STORAGE_KEY = 'earth-insights.dashboard-history';
+const HISTORY_STORAGE_KEY = 'kisan-alert.dashboard-history';
 
 type StoredHistoryEntry = {
   id: string;

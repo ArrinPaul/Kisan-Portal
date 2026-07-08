@@ -179,7 +179,7 @@ export function MetricsTable({ analysisResult, location, dateRange }: MetricsTab
         timeSeries: [], // Not needed for this CSV
     }));
     const csvData = generateCsv(metricsToExport, t);
-    downloadFile(csvData, 'earth-insights-metrics.csv', 'text/csv');
+    downloadFile(csvData, 'kisan-alert-metrics.csv', 'text/csv');
     toast({ title: t('dashboard.metrics.export.csvSuccess.title'), description: t('dashboard.metrics.export.csvSuccess.description') });
   }
 
@@ -230,7 +230,7 @@ export function MetricsTable({ analysisResult, location, dateRange }: MetricsTab
       ],
     };
 
-    downloadFile(JSON.stringify(geojson, null, 2), 'earth-insights-artifact.geojson', 'application/geo+json');
+    downloadFile(JSON.stringify(geojson, null, 2), 'kisan-alert-artifact.geojson', 'application/geo+json');
     toast({ title: 'GeoJSON export complete', description: 'Geospatial artifact downloaded successfully.' });
   };
 

@@ -8,12 +8,12 @@ import { executeWorkflow } from './workflow';
 import type { JobStateRecord, OrchestrationResult, PipelineRequest, WorkflowDefinition } from './types';
 
 export const defaultWorkflow: WorkflowDefinition = {
-  name: 'earth-insights-batch-workflow',
-  deadLetterTopic: 'earth-insights.pipeline.dlq',
+  name: 'kisan-alert-batch-workflow',
+  deadLetterTopic: 'kisan-alert.pipeline.dlq',
   steps: [
     {
       stage: 'preprocess',
-      pubsubTopic: 'earth-insights.pipeline.preprocess',
+      pubsubTopic: 'kisan-alert.pipeline.preprocess',
       cloudRunServiceName: 'ei-preprocess-job',
       retryPolicy: {
         maxAttempts: 3,
@@ -24,7 +24,7 @@ export const defaultWorkflow: WorkflowDefinition = {
     },
     {
       stage: 'train',
-      pubsubTopic: 'earth-insights.pipeline.train',
+      pubsubTopic: 'kisan-alert.pipeline.train',
       cloudRunServiceName: 'ei-train-job',
       retryPolicy: {
         maxAttempts: 3,
@@ -35,7 +35,7 @@ export const defaultWorkflow: WorkflowDefinition = {
     },
     {
       stage: 'inference',
-      pubsubTopic: 'earth-insights.pipeline.inference',
+      pubsubTopic: 'kisan-alert.pipeline.inference',
       cloudRunServiceName: 'ei-inference-job',
       retryPolicy: {
         maxAttempts: 2,
@@ -46,7 +46,7 @@ export const defaultWorkflow: WorkflowDefinition = {
     },
     {
       stage: 'promote',
-      pubsubTopic: 'earth-insights.pipeline.promote',
+      pubsubTopic: 'kisan-alert.pipeline.promote',
       cloudRunServiceName: 'ei-promote-job',
       retryPolicy: {
         maxAttempts: 2,
