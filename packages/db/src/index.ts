@@ -15,12 +15,18 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   },
 });
 
-const databaseUrl = process.env.DATABASE_URL;
+// Use DIRECT_URL (port 5432) for raw SQL — works reliably in serverless & local environments.
+// DATABASE_URL (port 6543, pgbouncer) is reserved for ORMs like Prisma that need it.
+const directUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
 
-// Direct PostgreSQL client for raw SQL / PostGIS queries
-export const sql = postgres(databaseUrl || '', {
-  ssl: databaseUrl?.includes('supabase') ? 'require' : false,
-  max: 10,
+if (!directUrl) {
+  throw new Error('DIRECT_URL (or DATABASE_URL) must be provided in environment variables.');
+}
+
+// Direct PostgreSQL client for raw SQL queries
+export const sql = postgres(directUrl, {
+  ssl: directUrl.includes('supabase') ? 'require' : false,
+  max: 5,
   idle_timeout: 20,
-  connect_timeout: 10,
+  connect_timeout: 15,
 });
