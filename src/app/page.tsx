@@ -49,73 +49,56 @@ export default function LandingPage() {
         {/* Hero Section */}
         <section className="relative w-full py-16 md:py-24 lg:py-32 flex items-center justify-center border-b border-white/5">
           <div className="container px-4 md:px-6 z-10">
-            <div className="grid gap-12 lg:grid-cols-12 items-center">
+            <div className="flex flex-col items-center justify-center text-center space-y-8 max-w-3xl mx-auto">
               
-              {/* Hero Left Content */}
-              <div className="lg:col-span-6 flex flex-col justify-center space-y-6 text-left">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-black uppercase tracking-wider w-fit">
-                  <Sparkles className="h-3 w-3" />
-                  Farmer-First Agricultural Platform
-                </div>
-                
-                <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl xl:text-6xl text-white Outfit leading-tight">
-                  Kisan Alert <br />
-                  <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-amber-300 bg-clip-text text-transparent">
-                    {t('landing.hero.title')}
-                  </span>
-                </h1>
-                
-                <p className="max-w-[600px] text-lg text-slate-400 md:text-xl font-medium">
-                  {t('landing.hero.subtitle')}
-                </p>
-
-                <div className="flex flex-col sm:flex-row gap-4 pt-2">
-                  {user ? (
-                    <>
-                      <Button asChild size="lg" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-lg shadow-emerald-950/40">
-                        <Link href="/kisan">
-                          <Sprout className="mr-2 h-5 w-5" />
-                          Farmer Console
-                        </Link>
-                      </Button>
-                      <Button asChild size="lg" variant="outline" className="border-white/10 hover:bg-white/5 text-white font-bold rounded-xl transition-all hover:scale-105">
-                        <Link href="/dashboard">
-                          <LineChart className="mr-2 h-5 w-5 text-emerald-400" />
-                          Analyst Dashboard
-                        </Link>
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button asChild size="lg" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-lg shadow-emerald-950/40">
-                        <Link href="/auth">
-                          Get Started
-                          <ArrowRight className="ml-2 h-5 w-5" />
-                        </Link>
-                      </Button>
-                      <Button asChild size="lg" variant="outline" className="border-white/10 hover:bg-white/5 text-white font-bold rounded-xl transition-all hover:scale-105">
-                        <Link href="/kisan">
-                          Try Farmer Mode
-                          <Sprout className="ml-2 h-5 w-5 text-emerald-400" />
-                        </Link>
-                      </Button>
-                    </>
-                  )}
-                </div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-black uppercase tracking-wider w-fit">
+                <Sparkles className="h-3 w-3" />
+                Farmer-First Agricultural Platform
               </div>
+              
+              <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl xl:text-6xl text-white Outfit leading-tight">
+                Kisan Alert <br />
+                <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-amber-300 bg-clip-text text-transparent">
+                  {t('landing.hero.title')}
+                </span>
+              </h1>
+              
+              <p className="max-w-[700px] text-lg text-slate-400 md:text-xl font-medium">
+                {t('landing.hero.subtitle')}
+              </p>
 
-              {/* Hero Right Dashboard Mockup */}
-              <div className="lg:col-span-6 flex justify-center items-center relative">
-                <div className="absolute inset-0 bg-emerald-500/5 rounded-2xl blur-2xl pointer-events-none" />
-                <div className="relative border border-white/10 rounded-2xl p-2 bg-slate-900/40 backdrop-blur-md shadow-2xl hover:scale-[1.02] transition-transform duration-500 group overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-emerald-500 to-transparent animate-pulse" />
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img 
-                    src="/kisan_dashboard_mockup.jpg" 
-                    alt="Kisan Alert Dashboard Mockup" 
-                    className="rounded-xl w-full h-auto object-cover max-h-[380px] filter brightness-95 group-hover:brightness-100 transition-all duration-300"
-                  />
-                </div>
+              <div className="flex flex-col sm:flex-row gap-4 pt-2 justify-center">
+                {user ? (
+                  <>
+                    <Button asChild size="lg" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-lg shadow-emerald-950/40">
+                      <Link href="/kisan">
+                        <Sprout className="mr-2 h-5 w-5" />
+                        Farmer Console
+                      </Link>
+                    </Button>
+                    <Button asChild size="lg" variant="outline" className="border-white/10 hover:bg-white/5 text-white font-bold rounded-xl transition-all hover:scale-105">
+                      <Link href="/dashboard">
+                        <LineChart className="mr-2 h-5 w-5 text-emerald-400" />
+                        Analyst Dashboard
+                      </Link>
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button asChild size="lg" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-all hover:scale-105 shadow-lg shadow-emerald-950/40">
+                      <Link href="/auth">
+                        Get Started
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </Link>
+                    </Button>
+                    <Button asChild size="lg" variant="outline" className="border-white/10 hover:bg-white/5 text-white font-bold rounded-xl transition-all hover:scale-105">
+                      <Link href="/kisan">
+                        Try Farmer Mode
+                        <Sprout className="ml-2 h-5 w-5 text-emerald-400" />
+                      </Link>
+                    </Button>
+                  </>
+                )}
               </div>
 
             </div>
