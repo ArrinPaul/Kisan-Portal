@@ -40,6 +40,7 @@ import {
 import { z } from 'zod';
 import { cookies } from 'next/headers';
 import { getFirestore } from '@/lib/firebase';
+import { AgriXaiFormatter, type AgriXaiReport } from '@/lib/agri-xai-formatter';
 
 
 import type { AdvancedCropAdvice, DroughtFloodRisk, GenerateTimelapseVideoInput, GenerateTimelapseVideoOutput, ScenarioAnalysis } from "@/lib/types";
@@ -402,6 +403,15 @@ export async function getCurrentUserAction(): Promise<{ data: { userId: string; 
             return { data: null, error: null };
         }
         return { data: { userId: auth.userId, role: auth.role }, error: null };
+    } catch (error) {
+        return { data: null, error: getErrorMessage(error) };
+    }
+}
+
+export async function getAgriXaiReportAction(metrics: Record<string, number>, location: string, dateRange: string, recommendedCrop?: string): Promise<{ data: AgriXaiReport | null; error: string | null }> {
+    try {
+        const report = AgriXaiFormatter.generateReport(location, dateRange, metrics, recommendedCrop);
+        return { data: report, error: null };
     } catch (error) {
         return { data: null, error: getErrorMessage(error) };
     }

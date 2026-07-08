@@ -21,6 +21,7 @@ import { MonitoringCard } from "./monitoring-card";
 import { ChangeInsightCard } from "./change-insight-card"; // New import
 import { Progress } from "@/components/ui/progress"; // New import
 import { GISDashboard } from "@/components/gis-dashboard";
+import { AgriXaiReportCard } from "@/components/agri-xai-report";
 
 type ComputationStatus = 'idle' | 'computing' | 'polling' | 'completed' | 'error';
 const HISTORY_STORAGE_KEY = 'earth-insights.dashboard-history';
@@ -255,6 +256,24 @@ export function Dashboard() {
     ? `${format(dateRange.from, "LLL dd, y")} - ${format(dateRange.to, "LLL dd, y")}`
     : "N/A";
     
+  const getXaiMetrics = (): Record<string, number> => {
+    const getLatest = (arr: any[] | undefined) => {
+      if (!arr || arr.length === 0) return 0.5;
+      return arr[arr.length - 1].value ?? 0.5;
+    };
+    const ndvi = analysisResult ? getLatest(analysisResult.timeSeries?.NDVI) : 0.5;
+    const ndwi = analysisResult ? getLatest(analysisResult.timeSeries?.NDWI) : 0.05;
+    const ndbi = analysisResult ? getLatest(analysisResult.timeSeries?.NDBI) : 0.12;
+    const soilMoisture = weather?.current?.humidity ? (weather.current.humidity / 100) * 0.4 + 0.1 : 0.24;
+    return {
+      NDVI: ndvi,
+      NDWI: ndwi,
+      NDBI: ndbi,
+      SoilMoisture: soilMoisture,
+      LSWI: (ndvi - ndwi) * 0.5 + 0.1
+    };
+  };
+
   const isProcessing = computationStatus === 'computing' || computationStatus === 'polling';
 
   const renderContent = () => {
@@ -327,6 +346,13 @@ export function Dashboard() {
                      <MonitoringCard nextPass={nextPass} isLoading={isFetchingPass} />
                 </div>
               </div>
+
+              <AgriXaiReportCard 
+                metrics={getXaiMetrics()}
+                location={`${lat}, ${lon}`}
+                dateRange={dateRangeString}
+                recommendedCrop="Rice"
+              />
     
               <LandCoverAnalysis landCover={analysisResult.landCover} />
 

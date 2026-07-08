@@ -20,6 +20,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { ContactSheet } from "@/components/contact-sheet";
+import { AgriXaiReportCard } from "@/components/agri-xai-report";
 
 const cropOptions = ["Corn", "Wheat", "Rice", "Soybeans", "Cotton", "Potatoes", "Tomatoes", "Barley", "Sorghum"];
 
@@ -150,80 +151,99 @@ function CropAdvisorContent() {
                     )}
 
                     {suggestionResult && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>{t('cropAdvisor.result.title')}</CardTitle>
-                                <CardDescription>{t('cropAdvisor.result.description')}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                     <Card className="p-4">
-                                        <CardDescription className="flex items-center gap-2 mb-2"><LandPlot /> {t('cropAdvisor.result.soilType')}</CardDescription>
-                                        <Badge variant="outline" className="text-lg">{suggestionResult.fetchedSoilType}</Badge>
-                                    </Card>
-                                     <Card className="p-4">
-                                        <CardDescription className="flex items-center gap-2 mb-2"><Droplets /> {t('cropAdvisor.result.moisture')}</CardDescription>
-                                        <Badge variant="outline" className="text-lg">{suggestionResult.fetchedMoistureLevel}</Badge>
-                                    </Card>
-                                </div>
+                         <Card>
+                             <CardHeader>
+                                 <CardTitle>{t('cropAdvisor.result.title')}</CardTitle>
+                                 <CardDescription>{t('cropAdvisor.result.description')}</CardDescription>
+                             </CardHeader>
+                             <CardContent className="space-y-6">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <Card className="p-4">
+                                         <CardDescription className="flex items-center gap-2 mb-2"><LandPlot /> {t('cropAdvisor.result.soilType')}</CardDescription>
+                                         <Badge variant="outline" className="text-lg">{suggestionResult.fetchedSoilType}</Badge>
+                                     </Card>
+                                      <Card className="p-4">
+                                         <CardDescription className="flex items-center gap-2 mb-2"><Droplets /> {t('cropAdvisor.result.moisture')}</CardDescription>
+                                         <Badge variant="outline" className="text-lg">{suggestionResult.fetchedMoistureLevel}</Badge>
+                                     </Card>
+                                 </div>
 
-                                <div className="text-center space-y-2 pt-4">
-                                    <p className="text-muted-foreground">{t('cropAdvisor.result.suggestedCrop')}</p>
-                                    <h3 className="text-4xl font-bold text-primary">{suggestionResult.suggestedCrop}</h3>
-                                </div>
-                                <div className="text-center space-y-2">
-                                     <p className="text-muted-foreground">{t('cropAdvisor.result.suitability')}</p>
-                                      <div className="relative h-8 w-full bg-muted rounded-full overflow-hidden">
-                                        <div className="absolute top-0 left-0 h-full bg-green-500 rounded-full" style={{ width: `${suggestionResult.suitabilityScore}%` }} />
-                                        <span className="absolute inset-0 flex items-center justify-center text-sm font-medium text-white mix-blend-difference">{suggestionResult.suitabilityScore}% {t('cropAdvisor.result.suitable')}</span>
-                                    </div>
-                                </div>
-                                
-                                <Alert>
-                                    <Lightbulb className="h-4 w-4" />
-                                    <AlertTitle>{t('cropAdvisor.result.reasoning')}</AlertTitle>
-                                    <AlertDescription>
-                                       {suggestionResult.reasoning}
-                                    </AlertDescription>
-                                </Alert>
+                                 <div className="text-center space-y-2 pt-4">
+                                     <p className="text-muted-foreground">{t('cropAdvisor.result.suggestedCrop')}</p>
+                                     <h3 className="text-4xl font-bold text-primary">{suggestionResult.suggestedCrop}</h3>
+                                 </div>
+                                 <div className="text-center space-y-2">
+                                      <p className="text-muted-foreground">{t('cropAdvisor.result.suitability')}</p>
+                                       <div className="relative h-8 w-full bg-muted rounded-full overflow-hidden">
+                                         <div className="absolute top-0 left-0 h-full bg-green-500 rounded-full" style={{ width: `${suggestionResult.suitabilityScore}%` }} />
+                                         <span className="absolute inset-0 flex items-center justify-center text-sm font-medium text-white mix-blend-difference">{suggestionResult.suitabilityScore}% {t('cropAdvisor.result.suitable')}</span>
+                                     </div>
+                                 </div>
+                                 
+                                 <Alert>
+                                     <Lightbulb className="h-4 w-4" />
+                                     <AlertTitle>{t('cropAdvisor.result.reasoning')}</AlertTitle>
+                                     <AlertDescription>
+                                        {suggestionResult.reasoning}
+                                     </AlertDescription>
+                                 </Alert>
 
-                                {suggestionResult.alternativeCrop && (
-                                     <Alert variant="default">
-                                        <Wheat className="h-4 w-4" />
-                                        <AlertTitle>{t('cropAdvisor.result.alternative')}</AlertTitle>
-                                        <AlertDescription>
-                                           {t('cropAdvisor.result.alternativeDesc', { crop: suggestionResult.alternativeCrop })}
-                                        </AlertDescription>
-                                    </Alert>
-                                )}
-                                
-                                <Separator className="my-6" />
-                                
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold">{t('cropAdvisor.advanced.title')}</h3>
-                                    <p className="text-sm text-muted-foreground">{t('cropAdvisor.advanced.description')}</p>
-                                    <div className="flex flex-col sm:flex-row gap-4">
-                                        <Select value={selectedCropForAdvice} onValueChange={setSelectedCropForAdvice}>
-                                            <SelectTrigger className="w-full sm:w-[280px]">
-                                                <SelectValue placeholder={t('cropAdvisor.advanced.selectCrop.placeholder')} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {suggestionResult.suggestedCrop && !cropOptions.includes(suggestionResult.suggestedCrop) && (
-                                                    <SelectItem value={suggestionResult.suggestedCrop}>{suggestionResult.suggestedCrop}</SelectItem>
-                                                )}
-                                                {cropOptions.map(crop => <SelectItem key={crop} value={crop}>{crop}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                        <Button onClick={handleAdvancedAdviceSubmit} disabled={!!isLoading || !selectedCropForAdvice} className="w-full sm:w-auto">
-                                            {isLoading === 'advanced' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Dna className="mr-2 h-4 w-4" />}
-                                            {t('cropAdvisor.advanced.button')}
-                                        </Button>
-                                    </div>
-                                </div>
+                                 {suggestionResult.alternativeCrop && (
+                                      <Alert variant="default">
+                                         <Wheat className="h-4 w-4" />
+                                         <AlertTitle>{t('cropAdvisor.result.alternative')}</AlertTitle>
+                                         <AlertDescription>
+                                            {t('cropAdvisor.result.alternativeDesc', { crop: suggestionResult.alternativeCrop })}
+                                         </AlertDescription>
+                                      </Alert>
+                                 )}
+                                 
+                                 <Separator className="my-6" />
+                                 
+                                 <div className="space-y-4">
+                                     <h3 className="text-lg font-semibold">{t('cropAdvisor.advanced.title')}</h3>
+                                     <p className="text-sm text-muted-foreground">{t('cropAdvisor.advanced.description')}</p>
+                                     <div className="flex flex-col sm:flex-row gap-4">
+                                         <Select value={selectedCropForAdvice} onValueChange={setSelectedCropForAdvice}>
+                                             <SelectTrigger className="w-full sm:w-[280px]">
+                                                 <SelectValue placeholder={t('cropAdvisor.advanced.selectCrop.placeholder')} />
+                                             </SelectTrigger>
+                                             <SelectContent>
+                                                 {suggestionResult.suggestedCrop && !cropOptions.includes(suggestionResult.suggestedCrop) && (
+                                                     <SelectItem value={suggestionResult.suggestedCrop}>{suggestionResult.suggestedCrop}</SelectItem>
+                                                 )}
+                                                 {cropOptions.map(crop => <SelectItem key={crop} value={crop}>{crop}</SelectItem>)}
+                                             </SelectContent>
+                                         </Select>
+                                         <Button onClick={handleAdvancedAdviceSubmit} disabled={!!isLoading || !selectedCropForAdvice} className="w-full sm:w-auto">
+                                             {isLoading === 'advanced' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Dna className="mr-2 h-4 w-4" />}
+                                             {t('cropAdvisor.advanced.button')}
+                                         </Button>
+                                     </div>
+                                 </div>
 
-                            </CardContent>
-                        </Card>
-                    )}
+                             </CardContent>
+                         </Card>
+                     )}
+
+                     {suggestionResult && (
+                         <div className="mt-6">
+                             <AgriXaiReportCard 
+                                 metrics={{
+                                     NDVI: 0.52,
+                                     NDWI: 0.08,
+                                     NDBI: 0.15,
+                                     SoilMoisture: suggestionResult.fetchedMoistureLevel === 'Wet' 
+                                         ? 0.35 
+                                         : suggestionResult.fetchedMoistureLevel === 'Optimal' ? 0.24 : 0.14,
+                                     LSWI: 0.28
+                                 }}
+                                 location={`${lat}, ${lon}`}
+                                 dateRange="Current Season"
+                                 recommendedCrop={suggestionResult.suggestedCrop}
+                             />
+                         </div>
+                     )}
                     
                     {isLoading === 'advanced' && (
                          <div className="flex justify-center items-center h-48">
